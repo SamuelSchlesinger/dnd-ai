@@ -1,0 +1,94 @@
+## Background-Based Adventure Hooks
+
+Based on the player's background, weave in relevant story hooks to create personal stakes. These are suggestions - improvise freely while keeping the player's history relevant.
+
+### Acolyte
+- Your temple has sent urgent word - something threatens the faith
+- A heresy is spreading, and you recognize a former mentor among the accused
+- Sacred relics have been stolen, and divination points to this region
+- A pilgrimage site has been corrupted by dark forces
+- **[IMMEDIATE THREAT]** Cultists of an opposing faith have tracked you here and attack on sight
+
+### Charlatan
+- A past mark has resurfaced with questions and muscle
+- Someone is running your old con - poorly - and it's drawing attention
+- A former partner has information you need... for a price
+- Your fake identity is about to be exposed in the worst possible way
+- **[IMMEDIATE THREAT]** Hired thugs from a past mark burst through the door demanding "payment"
+
+### Criminal
+- Your fence was murdered, and the evidence points to you
+- A heist opportunity too good to pass up has fallen into your lap
+- The law is closing in - someone talked
+- A crime lord wants to recruit you for "one last job"
+- **[IMMEDIATE THREAT]** Rivals from your old gang kick down the door seeking bloody revenge
+
+### Entertainer
+- A rival challenges your fame with a public performance duel
+- A powerful patron offers wealth for a private performance... too private
+- Your signature piece was stolen and is being performed elsewhere
+- A critic who ruined your mentor needs to be dealt with
+- **[IMMEDIATE THREAT]** A jealous rival has hired assassins to eliminate the competition permanently
+
+### Folk Hero
+- Your village sends desperate word - the tyrant has returned
+- Others have taken up your symbol, but their methods are questionable
+- The deed that made you famous has consequences you never anticipated
+- Common folk recognize you and beg for help you're not sure you can give
+- **[IMMEDIATE THREAT]** The tyrant's soldiers have found you and attack to make an example
+
+### Guild Artisan
+- A rare material surfaces on the black market - you need it
+- Guild politics threaten your standing; a rival has made accusations
+- Your masterwork was commissioned by someone dangerous
+- An apprentice has gone missing while working on your behalf
+- **[IMMEDIATE THREAT]** Thieves break in to steal your latest work and won't leave witnesses
+
+### Hermit
+- The discovery that drove you to isolation has new, urgent relevance
+- Others have found your former sanctuary - with questions
+- The visions that plagued you in solitude are coming true
+- Something you left behind in isolation has followed you back
+- **[IMMEDIATE THREAT]** The creature that drove you from your sanctuary has tracked you here
+
+### Noble
+- Family honor is at stake in a dispute you can't ignore
+- Political intrigue draws you into dangerous noble games
+- An old family servant has information about your lineage
+- Your claim to inheritance is being challenged by unknown rivals
+- **[IMMEDIATE THREAT]** Assassins sent by a rival house strike without warning
+
+### Outlander
+- Your tribe calls for aid against an ancient enemy stirring
+- The land you knew is dying, and you must find out why
+- Hunters from your past track something valuable you possess
+- Spirits of the wild send warnings only you can interpret
+- **[IMMEDIATE THREAT]** A pack of predators from your homeland has followed your scent
+
+### Sage
+- A forbidden text surfaces with knowledge you desperately seek
+- Your research has led to a dangerous truth someone wants buried
+- A scholarly rival has made a breakthrough using your stolen work
+- The answer to a lifelong question lies in this very place
+- **[IMMEDIATE THREAT]** Agents of a secret society attack to silence your dangerous knowledge
+
+### Sailor
+- An old crewmate needs help with a debt they can't pay
+- A legendary treasure map has fallen into your possession
+- Your former ship has been spotted - but it sank years ago
+- Someone from a port you'd rather forget has tracked you down
+- **[IMMEDIATE THREAT]** Pirates from your past have cornered you seeking bloody vengeance
+
+### Soldier
+- Your old commander sends word of urgent need
+- War criminals from your unit have been sighted nearby
+- A mission that went wrong has survivors who remember you
+- Military secrets you carry have made you a target
+- **[IMMEDIATE THREAT]** Enemy soldiers who survived your last campaign have tracked you down for revenge
+
+### Urchin
+- Someone from the streets has information about your family
+- The crime boss who "owned" your territory wants you back
+- A child in trouble reminds you of your younger self
+- The hidden places of cities reveal secrets no one else can find
+- **[IMMEDIATE THREAT]** Street enforcers from your old territory have come to collect on old debts with violence

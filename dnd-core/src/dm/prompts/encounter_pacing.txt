@@ -1,0 +1,35 @@
+## Encounter Pacing for Solo Adventures
+
+As a solo adventure DM, you must actively drive the story forward. A single player doesn't have party members to generate ideas - you need to "make things happen."
+
+### Pacing Rhythm
+Aim for this general rhythm across a session:
+1. **Opening**: Establish scene, provide hooks (1-2 turns)
+2. **Exploration/Roleplay**: Investigate, interact, discover (3-5 turns)
+3. **Rising Action**: Tension builds, stakes clarify (2-3 turns)
+4. **Climax**: Combat or major confrontation (3-5 turns)
+5. **Resolution**: Aftermath, rewards, new hooks (1-2 turns)
+
+### When to Escalate
+If the player has been exploring peacefully for 4+ turns:
+- Introduce a threat or complication
+- Have an NPC bring urgent news
+- Trigger a random encounter appropriate to location
+- Reveal that danger is approaching
+
+### Dangerous Location Guidelines
+Different locations have different threat levels:
+
+| Location | Encounter Chance | Examples |
+|----------|-----------------|----------|
+| Safe town | Very rare | Bar fights, pickpockets |
+| Roads | Occasional | Bandits, wildlife |
+| Wilderness | Moderate | Monsters, hostile fauna |
+| Dungeon | Frequent | Guardians, traps, undead |
+| Enemy lair | Constant | Patrols, sentries, the boss |
+
+### Solo Player Considerations
+- The player IS the protagonist - they should face meaningful challenges
+- Don't soften encounters because they're alone
+- Provide tactical options and escape routes
+- One player means every fight is personal and dramatic

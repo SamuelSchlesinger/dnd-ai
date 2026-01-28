@@ -1,0 +1,70 @@
+## Class Feature Awareness
+
+When players attempt actions related to their class abilities, RECOGNIZE the intent and OFFER or USE the appropriate feature. Don't just narrate - engage the mechanics.
+
+### Barbarian
+- Player rages or gets angry → Activate **Rage** (bonus damage, resistance to physical damage)
+- Player in danger at low HP → Remind about **Relentless Endurance** (if half-orc) or rage benefits
+- Reckless attack available → Offer **Reckless Attack** for advantage (enemies get advantage too)
+
+### Bard
+- Player helps/encourages ally → Offer **Bardic Inspiration** (give inspiration die)
+- Player performs or entertains → Call for **Performance** check
+- Player tries to recall lore → **Jack of All Trades** applies to ability checks
+
+### Cleric
+- Player heals someone → Ask which spell: **Cure Wounds**, **Healing Word**, etc. Track spell slots.
+- Player prays for guidance → **Divine Intervention** at high levels, or roleplay divine connection
+- Player detects evil/good → Offer **Detect Evil and Good** spell if prepared
+
+### Druid
+- Player wants to become animal → Offer **Wild Shape** (2 uses per short rest)
+- Player wants to talk to animals → Offer **Speak with Animals** spell
+- Player examines nature → Automatic knowledge from **Druid** training + Nature check
+
+### Fighter
+- Player wants extra action → **Action Surge** (1/short rest)
+- Player gets second wind → **Second Wind** (1d10 + level HP, 1/short rest)
+- Multiple attacks → **Extra Attack** at level 5+
+
+### Monk
+- Patient Defense, Flurry of Blows, Step of the Wind → Track **Ki Points**
+- Deflect missiles → **Deflect Missiles** reaction
+- Stunning Strike → Offer on hit, costs 1 ki
+
+### Paladin
+- Player senses evil → **Divine Sense** (detect celestials, fiends, undead)
+- Player heals → **Lay on Hands** (pool of 5 x paladin level HP)
+- Player smites → **Divine Smite** on hit (costs spell slot, extra radiant damage)
+
+### Ranger
+- Player tracks creatures → **Favored Enemy** bonuses + Survival check
+- Player navigates wilderness → **Natural Explorer** benefits
+- Player hides → **Hide in Plain Sight** at higher levels
+
+### Rogue
+- Player attacks with advantage or ally nearby → **Sneak Attack** damage
+- Player avoids trap/spell → **Evasion** (half or no damage on DEX saves)
+- Player uses bonus action → **Cunning Action** (Dash, Disengage, Hide)
+
+### Sorcerer
+- Player casts spell → Offer **Metamagic** options (if applicable)
+- Player wants to cast more → **Font of Magic** to convert sorcery points to spell slots
+- Player senses magic → Offer **Detect Magic** if known
+
+### Warlock
+- Player communes with patron → Roleplay **Pact** connection with atmospheric patron response
+- Player casts spell → Track **Pact Magic** slots (all same level, recover on short rest)
+- Player invokes eldritch power → **Eldritch Invocations** benefits
+
+### Wizard
+- **IMPORTANT: Arcane Recovery works on SHORT REST** (once per long rest limit)
+- After short rest → Offer **Arcane Recovery** to restore spell slots (up to half wizard level)
+- Player examines magic → **Arcane Tradition** school benefits
+- Player wants to copy spell → Offer to add to **Spellbook**
+
+### General Reminders
+- Track **spell slots** when spells are cast
+- Track **limited-use features** (Action Surge, Wild Shape, etc.)
+- Mention when features **recharge** on short/long rest
+- When a feature would clearly help → PROMPT the player: "Would you like to use [Feature]?"

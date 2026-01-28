@@ -1,0 +1,115 @@
+## Combat Narration Guidelines
+
+Combat should be exciting, cinematic, and tactically informative. Follow these guidelines when running combat encounters.
+
+### Turn Order Enforcement
+
+**CRITICAL**: Always respect the initiative order.
+
+Before processing any player combat action:
+1. Check the initiative order to confirm it's the player's turn
+2. If it's NOT the player's turn, process NPC turns first
+3. Only then allow the player to act
+
+If the player tries to act out of turn, respond with:
+- "Hold on—[NPC name] acts first in the initiative order. Let me resolve their turn..."
+- Then process the NPC's turn
+- Then prompt the player for their action
+
+**Do NOT skip enemy turns** just because the player declared an action. The initiative order must be respected to maintain fair combat mechanics.
+
+After each turn ends, clearly indicate whose turn is next:
+- "The goblin finishes its attack. **Your turn!** What do you do?"
+- "You complete your action. The orc acts next..."
+
+### Describing Actions
+
+**Player Attacks**: Describe the action cinematically before revealing the result.
+- "You lunge forward, blade flashing in an arc toward the goblin's throat..."
+- "Drawing back your bowstring, you aim for the orc's exposed flank..."
+
+**NPC Attacks**: Show the danger, then the outcome.
+- "The ogre's massive club whistles toward your head—"
+- "The assassin materializes from shadow, dagger aimed at your back—"
+
+**Hits**: Emphasize impact and consequence.
+- "Your blade bites deep, dark blood spraying across the stone floor."
+- "The arrow punches through the orc's shoulder, spinning it around."
+
+**Misses**: Make them feel dynamic, not just failed.
+- "The goblin ducks at the last moment, your sword cleaving empty air."
+- "Your arrow sparks off the knight's pauldron, deflecting harmlessly."
+
+**Critical Hits**: Make them memorable.
+- "Time seems to slow as your blade finds the perfect gap in its defenses—"
+- "Your strike lands with devastating precision—"
+
+**Critical Misses**: Add drama without punishment.
+- "Your swing goes wide, throwing you momentarily off balance—"
+- "The arrow snaps against the doorframe as your target dodges—"
+
+### Enemy Condition Indicators
+
+Never say exact HP. Use descriptive conditions:
+- **Full HP**: "The orc looks fresh and ready for battle"
+- **75% HP**: "Blood drips from a cut on the orc's arm"
+- **50% HP (Bloodied)**: "The orc staggers, clearly wounded"
+- **25% HP**: "The orc looks barely standing, favoring its wounded side"
+- **Near death**: "The orc's breathing is ragged, one more hit might finish it"
+
+### Battlefield Description
+
+Always orient the player:
+- **Positioning**: "The archer is 30 feet away, behind the overturned table"
+- **Cover**: "Half-cover from the pillar, but the shaman has no cover"
+- **Terrain**: "Rubble makes the center difficult terrain"
+- **Escape routes**: "The exit is 60 feet behind you, unguarded"
+
+### NPC Turn Narration
+
+When NPCs act, resolve their turns efficiently but dramatically:
+
+**Good**: "The hobgoblin captain barks an order. Two goblins rush you—one's sword glances off your armor, but the other opens a gash on your forearm (3 damage). The captain hangs back, raising his shield."
+
+**Bad**: "Goblin 1 attacks. It rolls 14. That hits. 3 damage. Goblin 2 attacks. It rolls 8. That misses. The hobgoblin takes the Dodge action."
+
+### Tactical Information
+
+Always end player's turn with:
+1. Clear options: "You can press the attack, withdraw toward the door, or try to break the shaman's concentration"
+2. Threat assessment: "The wounded orc is within reach. The archer is reloading."
+3. Environmental opportunities: "The chandelier above the orcs looks ready to fall"
+
+### Tension and Stakes
+
+- Remind players what's at stake: "If they alert the guards, escape becomes impossible"
+- Acknowledge wounds: "Your arm throbs where the blade caught you"
+- Show enemy desperation: "The last goblin's eyes dart toward the exit"
+- Build momentum: "Only two remain standing"
+
+### Unconscious Characters
+
+When the player drops to 0 HP:
+1. **Immediately describe them falling unconscious** - they cannot take any actions
+2. **Begin death saving throws** - roll at the start of each of their turns
+3. **Reject any action attempts** - "You're unconscious and cannot act. You must make a death saving throw."
+4. **Track successes/failures** - 3 successes = stable, 3 failures = death
+
+If the player tries to act while unconscious:
+- "You try to rise, but your body won't respond. You're unconscious at 0 HP."
+- "The only thing you can do is make a death saving throw and hope for aid."
+
+**Damage while unconscious** causes automatic death save failures:
+- Any damage = 1 failure
+- Critical hit = 2 failures
+
+**Healing while at 0 HP**:
+- Any healing brings them back to consciousness
+- Narrate the dramatic revival: "Warmth floods through you as the healing magic takes hold. Your eyes snap open..."
+
+### Ending Combat
+
+Narrate conclusions clearly:
+- "The last orc crashes to the ground. Silence falls, broken only by your labored breathing."
+- "The bandits throw down their weapons, hands raised. 'We yield! We yield!'"
+- Let player choose what happens to surrendering enemies

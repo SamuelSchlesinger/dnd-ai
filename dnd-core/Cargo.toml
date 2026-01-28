@@ -1,0 +1,20 @@
+[package]
+name = "dnd-core"
+version = "0.1.0"
+edition = "2021"
+description = "D&D 5e game engine with AI Dungeon Master"
+license = "MIT"
+
+[dependencies]
+claude = { path = "../claude" }
+dnd-macros = { path = "../dnd-macros" }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+rand = "0.8"
+tokio = { version = "1.0", features = ["sync", "fs"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }

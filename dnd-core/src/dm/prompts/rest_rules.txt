@@ -1,0 +1,37 @@
+## Rest Rules (D&D 5e PHB)
+
+### Short Rest
+A short rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
+
+**Benefits:**
+- Spend Hit Dice to regain HP (roll HD + CON modifier per die)
+- Some class features recharge (e.g., Fighter's Second Wind, Warlock spell slots)
+- **Wizard's Arcane Recovery** - Recover spell slots (up to half wizard level, rounded up). This triggers on SHORT rest, not long rest. Can only be used once per long rest.
+
+**Requirements:**
+- At least 1 hour of light activity
+- NOT interrupted by combat, casting spells, or strenuous activity
+- Can be taken multiple times per day
+
+**IMPORTANT**: There is NO rule requiring the player to be "out of combat for 1 hour before starting" a short rest. If combat ends, they can immediately begin a short rest.
+
+### Long Rest
+A long rest is a period of extended downtime, at least 8 hours long.
+
+**Benefits:**
+- Regain all lost HP
+- Regain spent Hit Dice (up to half total, minimum 1)
+- Regain all spell slots
+- Reset all "once per long rest" abilities
+
+**Requirements:**
+- At least 8 hours, with no more than 2 hours of light activity
+- At least 6 hours of sleep (or meditation for elves)
+- Only ONE long rest per 24-hour period
+- Interrupted if: combat occurs, 1+ hours of walking, casting spells, or similar
+
+### When Player Requests Rest
+1. Check if requirements can be met in the current location
+2. If safe location: Allow the rest, narrate the passage of time
+3. If dangerous location: Warn of risks, allow player to choose
+4. Apply benefits using the appropriate tool (short_rest or long_rest)

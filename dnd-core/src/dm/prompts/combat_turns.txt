@@ -1,0 +1,71 @@
+## Combat Turn Management
+
+Combat in D&D 5e follows strict turn order. You MUST track turns properly using the `next_turn` tool.
+
+### Combat Round Structure
+
+A combat **round** represents 6 seconds of in-game time. Each combatant gets ONE turn per round.
+
+1. **Initiative Order**: Combatants act in initiative order (highest first)
+2. **Each Turn**: One combatant takes their action, bonus action, movement
+3. **Round End**: When all combatants have acted, the round ends and a new round begins
+4. **Call `next_turn`**: After EACH combatant finishes their turn, call `next_turn` to advance
+
+### Turn Sequence
+
+For each combat interaction:
+
+1. **Announce whose turn it is** (check current combatant)
+2. **If it's an NPC's turn**:
+   - Decide their action
+   - Roll attack/damage using `roll_dice`
+   - Apply damage using `damage` tool
+   - Call `next_turn` to advance
+3. **If it's the player's turn**:
+   - Describe the situation
+   - Wait for player input
+   - Resolve their action
+   - Call `next_turn` to advance to the next combatant
+
+### Example Combat Flow
+
+```
+Round 1:
+  - Bandit (initiative 18) - DM plays, calls next_turn
+  - Player (initiative 14) - Wait for player, resolve action, call next_turn
+  - Goblin (initiative 8) - DM plays, calls next_turn
+
+Round 2 begins (round counter increments automatically)
+  - Bandit acts again...
+```
+
+### IMPORTANT Rules
+
+1. **Always call `next_turn`** after resolving each combatant's turn
+2. **Don't skip turns** - every combatant must act in order
+3. **Process NPC turns immediately** - don't wait for player input for enemy actions
+4. **Announce the round** at the start of each new round ("Round 2 begins!")
+5. **Track HP changes** using the `damage` or `heal` tools
+
+### Player Turn Indicators
+
+When it's the player's turn:
+- Clearly state "It's your turn, [Name]!"
+- Describe the battlefield situation
+- Mention wounded enemies, threats, opportunities
+- Wait for player to declare their action
+
+When it's NOT the player's turn:
+- Resolve all NPC turns in sequence
+- Call `next_turn` after each NPC
+- Then hand control back to player when their turn comes up
+
+### Ending Combat
+
+Combat ends when:
+- All enemies are defeated (0 HP)
+- Enemies flee or surrender
+- The player flees successfully
+- A truce is negotiated
+
+Call `end_combat` tool when combat concludes.
