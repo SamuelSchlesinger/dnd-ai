@@ -135,9 +135,7 @@ impl CharacterCreation {
             match self.step {
                 CreationStep::Name => self.handle_name_input(key),
                 CreationStep::Race => self.handle_list_selection(key, RaceType::all().len()),
-                CreationStep::Class => {
-                    self.handle_list_selection(key, CharacterClass::all().len())
-                }
+                CreationStep::Class => self.handle_list_selection(key, CharacterClass::all().len()),
                 CreationStep::Background => {
                     self.handle_list_selection(key, Background::all().len())
                 }
@@ -154,27 +152,46 @@ impl CharacterCreation {
     fn handle_name_input(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(c) => {
-                if self.name.len() < 30 {
-                    self.name.insert(self.cursor_position, c);
+                // Use character count for length check (unicode-safe)
+                if self.name.chars().count() < 30 {
+                    // Convert cursor position (character index) to byte index
+                    let byte_pos = self
+                        .name
+                        .char_indices()
+                        .nth(self.cursor_position)
+                        .map(|(i, _)| i)
+                        .unwrap_or(self.name.len());
+                    self.name.insert(byte_pos, c);
                     self.cursor_position += 1;
                 }
             }
             KeyCode::Backspace => {
                 if self.cursor_position > 0 {
                     self.cursor_position -= 1;
-                    self.name.remove(self.cursor_position);
+                    // Get byte range of the character at cursor position
+                    if let Some((byte_pos, ch)) = self.name.char_indices().nth(self.cursor_position)
+                    {
+                        self.name
+                            .replace_range(byte_pos..byte_pos + ch.len_utf8(), "");
+                    }
                 }
             }
             KeyCode::Delete => {
-                if self.cursor_position < self.name.len() {
-                    self.name.remove(self.cursor_position);
+                let char_count = self.name.chars().count();
+                if self.cursor_position < char_count {
+                    if let Some((byte_pos, ch)) = self.name.char_indices().nth(self.cursor_position)
+                    {
+                        self.name
+                            .replace_range(byte_pos..byte_pos + ch.len_utf8(), "");
+                    }
                 }
             }
             KeyCode::Left => {
                 self.cursor_position = self.cursor_position.saturating_sub(1);
             }
             KeyCode::Right => {
-                self.cursor_position = (self.cursor_position + 1).min(self.name.len());
+                let char_count = self.name.chars().count();
+                self.cursor_position = (self.cursor_position + 1).min(char_count);
             }
             KeyCode::Enter => {
                 if !self.name.trim().is_empty() {
@@ -359,8 +376,7 @@ impl CharacterCreation {
         self.ability_scores.set(target_ability, value);
 
         // Move to next unassigned ability
-        for i in 0..6 {
-            let ability = abilities[i];
+        for (i, &ability) in abilities.iter().enumerate() {
             let already_assigned = self.ability_assignment.contains(&Some(ability));
             if !already_assigned {
                 self.assignment_index = i;
@@ -642,7 +658,14 @@ impl CharacterCreation {
         let character = self.build_preview_character();
 
         let block = Block::default()
-            .title(format!(" {} ", if self.name.is_empty() { "Preview" } else { &self.name }))
+            .title(format!(
+                " {} ",
+                if self.name.is_empty() {
+                    "Preview"
+                } else {
+                    &self.name
+                }
+            ))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::DarkGray));
 
@@ -706,7 +729,10 @@ impl CharacterCreation {
         let combat_stats = vec![
             Line::from(vec![
                 Span::raw("AC: "),
-                Span::styled(format!("{ac}"), Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{ac}"),
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("  Init: "),
                 Span::styled(init_str, Style::default()),
             ]),
@@ -825,7 +851,11 @@ impl CharacterCreation {
                 race.ability_bonuses(),
                 race.base_speed()
             ))
-            .block(Block::default().borders(Borders::ALL).title(" Description "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Description "),
+            )
             .wrap(Wrap { trim: true });
             frame.render_widget(desc, chunks[1]);
         }
@@ -855,7 +885,11 @@ impl CharacterCreation {
         if let Some(i) = self.list_state.selected() {
             let class = CharacterClass::all()[i];
             let data = class.data();
-            let saves: Vec<&str> = data.saving_throws.iter().map(|a| a.abbreviation()).collect();
+            let saves: Vec<&str> = data
+                .saving_throws
+                .iter()
+                .map(|a| a.abbreviation())
+                .collect();
             let desc = Paragraph::new(format!(
                 "{}\n\nHit Die: d{}\nSaving Throws: {}\nSkills: {} from {} options",
                 class.description(),
@@ -864,7 +898,11 @@ impl CharacterCreation {
                 data.skill_count,
                 data.skill_options.len()
             ))
-            .block(Block::default().borders(Borders::ALL).title(" Description "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Description "),
+            )
             .wrap(Wrap { trim: true });
             frame.render_widget(desc, chunks[1]);
         }
@@ -901,7 +939,11 @@ impl CharacterCreation {
                 skills[0].name(),
                 skills[1].name()
             ))
-            .block(Block::default().borders(Borders::ALL).title(" Description "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Description "),
+            )
             .wrap(Wrap { trim: true });
             frame.render_widget(desc, chunks[1]);
         }
@@ -995,8 +1037,11 @@ impl CharacterCreation {
             .collect();
         lines.push(available.join("  "));
 
-        let abilities_text = Paragraph::new(lines.join("\n"))
-            .block(Block::default().borders(Borders::ALL).title(" Standard Array "));
+        let abilities_text = Paragraph::new(lines.join("\n")).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Standard Array "),
+        );
         frame.render_widget(abilities_text, chunks[1]);
 
         // Help
@@ -1119,7 +1164,8 @@ impl CharacterCreation {
         // Show rolled values
         lines.push(String::new());
         lines.push("Rolled values (4d6 drop lowest):".to_string());
-        let rolled: Vec<String> = self.rolled_scores
+        let rolled: Vec<String> = self
+            .rolled_scores
             .iter()
             .enumerate()
             .map(|(i, v)| {
@@ -1132,8 +1178,11 @@ impl CharacterCreation {
             .collect();
         lines.push(rolled.join("  "));
 
-        let abilities_text = Paragraph::new(lines.join("\n"))
-            .block(Block::default().borders(Borders::ALL).title(" Rolled Scores "));
+        let abilities_text = Paragraph::new(lines.join("\n")).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Rolled Scores "),
+        );
         frame.render_widget(abilities_text, chunks[1]);
 
         // Help
@@ -1248,20 +1297,27 @@ impl CharacterCreation {
         let ac = character.current_ac();
         let init = character.initiative_modifier();
         let speed = character.speed.walk;
-        let init_str = if init >= 0 { format!("+{init}") } else { format!("{init}") };
+        let init_str = if init >= 0 {
+            format!("+{init}")
+        } else {
+            format!("{init}")
+        };
 
-        let combat = vec![
-            Line::from(vec![
-                Span::styled("AC: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{ac}"), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-                Span::raw("    "),
-                Span::styled("Initiative: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(init_str, Style::default().fg(Color::White)),
-                Span::raw("    "),
-                Span::styled("Speed: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{speed} ft"), Style::default().fg(Color::White)),
-            ]),
-        ];
+        let combat = vec![Line::from(vec![
+            Span::styled("AC: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{ac}"),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("    "),
+            Span::styled("Initiative: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(init_str, Style::default().fg(Color::White)),
+            Span::raw("    "),
+            Span::styled("Speed: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{speed} ft"), Style::default().fg(Color::White)),
+        ])];
         frame.render_widget(
             Paragraph::new(combat).block(Block::default().borders(Borders::ALL).title(" Combat ")),
             sheet_chunks[2],
@@ -1288,25 +1344,39 @@ impl CharacterCreation {
             };
             ability_lines.push(Line::from(vec![
                 Span::styled(format!("{abbr}: "), Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{score:2}"), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{score:2}"),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(format!(" ({mod_str})"), Style::default().fg(Color::Cyan)),
             ]));
         }
         frame.render_widget(
-            Paragraph::new(ability_lines).block(Block::default().borders(Borders::ALL).title(" Abilities ")),
+            Paragraph::new(ability_lines)
+                .block(Block::default().borders(Borders::ALL).title(" Abilities ")),
             sheet_chunks[3],
         );
 
         // Skills
-        let mut skill_names: Vec<&str> = character.skill_proficiencies.keys().map(|s| s.name()).collect();
+        let mut skill_names: Vec<&str> = character
+            .skill_proficiencies
+            .keys()
+            .map(|s| s.name())
+            .collect();
         skill_names.sort(); // Stable order
         let mut skill_lines = Vec::new();
         for chunk in skill_names.chunks(2) {
             let line_text = chunk.join(", ");
-            skill_lines.push(Line::from(Span::styled(line_text, Style::default().fg(Color::White))));
+            skill_lines.push(Line::from(Span::styled(
+                line_text,
+                Style::default().fg(Color::White),
+            )));
         }
         frame.render_widget(
-            Paragraph::new(skill_lines).block(Block::default().borders(Borders::ALL).title(" Skills ")),
+            Paragraph::new(skill_lines)
+                .block(Block::default().borders(Borders::ALL).title(" Skills ")),
             sheet_chunks[4],
         );
 
@@ -1323,21 +1393,39 @@ impl CharacterCreation {
             Line::from(""),
             Line::from(Span::styled(
                 "Ready to begin your adventure?",
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
             )),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  Enter", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "  Enter",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" or "),
-                Span::styled("Y", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Y",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" - Create character"),
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("  Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "  Esc",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" or "),
-                Span::styled("N", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "N",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" - Go back"),
             ]),
         ];

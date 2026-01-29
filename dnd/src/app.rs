@@ -5,9 +5,9 @@ use std::path::PathBuf;
 
 use dnd_core::dice::{DiceExpression, RollResult};
 use dnd_core::world::{GameMode, NarrativeType};
-use dnd_core::{GameSession, SessionError};
+use tokio::sync::mpsc;
 
-use crate::effects::process_effects;
+use crate::ai_worker::{WorkerRequest, WorkerResponse, WorldUpdate};
 use crate::ui::theme::GameTheme;
 use crate::ui::widgets::narrative::NarrativeItem;
 use crate::ui::{FocusedPanel, Overlay};
@@ -41,8 +41,12 @@ pub struct RollingDice {
 
 /// Main application state
 pub struct App {
-    // Game state
-    pub session: GameSession,
+    // Channel communication with AI worker
+    pub request_tx: mpsc::Sender<WorkerRequest>,
+    pub response_rx: mpsc::Receiver<WorkerResponse>,
+
+    // Local world state snapshot for rendering
+    pub world: WorldUpdate,
 
     // UI state
     pub theme: GameTheme,
@@ -74,17 +78,27 @@ pub struct App {
 
     // AI processing
     pub ai_processing: bool,
-
-    // Pending save/load operations
-    pub pending_save: Option<PathBuf>,
-    pub pending_load: Option<PathBuf>,
 }
 
 impl App {
-    /// Create a new application with a game session
-    pub fn new(session: GameSession) -> Self {
+    /// Create a new application with channel endpoints and initial world state
+    pub fn new(
+        request_tx: mpsc::Sender<WorkerRequest>,
+        response_rx: mpsc::Receiver<WorkerResponse>,
+        world: WorldUpdate,
+    ) -> Self {
+        let class_str = world.player_class.as_deref().unwrap_or("adventurer");
+        let welcome = format!(
+            "{} the {} steps into {}.\n\nThe familiar sounds and smells of the inn surround you. What would you like to do?",
+            world.player_name,
+            class_str,
+            world.current_location
+        );
+
         let mut app = Self {
-            session,
+            request_tx,
+            response_rx,
+            world,
             theme: GameTheme::default(),
             focused_panel: FocusedPanel::default(),
             overlay: None,
@@ -104,18 +118,8 @@ impl App {
             animation_frame: 0,
             rolling_dice: None,
             ai_processing: false,
-            pending_save: None,
-            pending_load: None,
         };
 
-        // Add welcome narrative with character details
-        let class_str = app.session.player_class().unwrap_or("adventurer");
-        let welcome = format!(
-            "{} the {} steps into {}.\n\nThe familiar sounds and smells of the inn surround you. What would you like to do?",
-            app.session.player_name(),
-            class_str,
-            app.session.current_location()
-        );
         app.add_narrative(welcome, NarrativeType::DmNarration);
         app.add_narrative(
             "Press 'i' to describe your action, '?' for help, or scroll with j/k".to_string(),
@@ -127,7 +131,7 @@ impl App {
 
     /// Get the current game mode
     pub fn game_mode(&self) -> GameMode {
-        self.session.world().mode
+        self.world.mode
     }
 
     /// Enter command mode (starts with :)
@@ -162,6 +166,27 @@ impl App {
 
         if should_scroll {
             self.scroll_to_bottom();
+        }
+    }
+
+    /// Append text to the streaming buffer
+    pub fn append_streaming_text(&mut self, text: &str) {
+        match &mut self.streaming_text {
+            Some(existing) => existing.push_str(text),
+            None => self.streaming_text = Some(text.to_string()),
+        }
+        // Auto-scroll when streaming
+        if self.scroll_locked_to_bottom {
+            self.scroll_to_bottom();
+        }
+    }
+
+    /// Finalize the streaming response into a narrative entry
+    pub fn finalize_streaming(&mut self) {
+        if let Some(text) = self.streaming_text.take() {
+            if !text.is_empty() {
+                self.add_narrative(text, NarrativeType::DmNarration);
+            }
         }
     }
 
@@ -237,24 +262,41 @@ impl App {
         Some(input)
     }
 
-    /// Handle a typed character
+    /// Handle a typed character (unicode-safe)
     pub fn type_char(&mut self, c: char) {
-        self.input_buffer.insert(self.cursor_position, c);
+        // Convert cursor position (character index) to byte index
+        let byte_pos = self
+            .input_buffer
+            .char_indices()
+            .nth(self.cursor_position)
+            .map(|(i, _)| i)
+            .unwrap_or(self.input_buffer.len());
+        self.input_buffer.insert(byte_pos, c);
         self.cursor_position += 1;
     }
 
-    /// Handle backspace
+    /// Handle backspace (unicode-safe)
     pub fn backspace(&mut self) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
-            self.input_buffer.remove(self.cursor_position);
+            // Get byte range of the character at cursor position
+            if let Some((byte_pos, ch)) = self.input_buffer.char_indices().nth(self.cursor_position)
+            {
+                self.input_buffer
+                    .replace_range(byte_pos..byte_pos + ch.len_utf8(), "");
+            }
         }
     }
 
-    /// Handle delete
+    /// Handle delete (unicode-safe)
     pub fn delete(&mut self) {
-        if self.cursor_position < self.input_buffer.len() {
-            self.input_buffer.remove(self.cursor_position);
+        let char_count = self.input_buffer.chars().count();
+        if self.cursor_position < char_count {
+            if let Some((byte_pos, ch)) = self.input_buffer.char_indices().nth(self.cursor_position)
+            {
+                self.input_buffer
+                    .replace_range(byte_pos..byte_pos + ch.len_utf8(), "");
+            }
         }
     }
 
@@ -265,7 +307,8 @@ impl App {
 
     /// Move cursor right
     pub fn cursor_right(&mut self) {
-        self.cursor_position = (self.cursor_position + 1).min(self.input_buffer.len());
+        let char_count = self.input_buffer.chars().count();
+        self.cursor_position = (self.cursor_position + 1).min(char_count);
     }
 
     /// Move cursor to start
@@ -273,9 +316,9 @@ impl App {
         self.cursor_position = 0;
     }
 
-    /// Move cursor to end
+    /// Move cursor to end (unicode-safe)
     pub fn cursor_end(&mut self) {
-        self.cursor_position = self.input_buffer.len();
+        self.cursor_position = self.input_buffer.chars().count();
     }
 
     /// Navigate to previous input in history
@@ -298,7 +341,7 @@ impl App {
         if let Some(idx) = new_index {
             if let Some(entry) = self.input_history.get(idx) {
                 self.input_buffer = entry.clone();
-                self.cursor_position = self.input_buffer.len();
+                self.cursor_position = self.input_buffer.chars().count();
                 self.history_index = new_index;
             }
         }
@@ -313,13 +356,13 @@ impl App {
             Some(0) => {
                 // Return to saved input or empty
                 self.input_buffer = self.saved_input.take().unwrap_or_default();
-                self.cursor_position = self.input_buffer.len();
+                self.cursor_position = self.input_buffer.chars().count();
                 self.history_index = None;
             }
             Some(i) => {
                 if let Some(entry) = self.input_history.get(i - 1) {
                     self.input_buffer = entry.clone();
-                    self.cursor_position = self.input_buffer.len();
+                    self.cursor_position = self.input_buffer.chars().count();
                     self.history_index = Some(i - 1);
                 }
             }
@@ -332,6 +375,33 @@ impl App {
             self.overlay = None;
         } else {
             self.overlay = Some(Overlay::Help);
+        }
+    }
+
+    /// Toggle inventory overlay
+    pub fn toggle_inventory(&mut self) {
+        if matches!(self.overlay, Some(Overlay::Inventory)) {
+            self.overlay = None;
+        } else {
+            self.overlay = Some(Overlay::Inventory);
+        }
+    }
+
+    /// Toggle character sheet overlay
+    pub fn toggle_character_sheet(&mut self) {
+        if matches!(self.overlay, Some(Overlay::CharacterSheet)) {
+            self.overlay = None;
+        } else {
+            self.overlay = Some(Overlay::CharacterSheet);
+        }
+    }
+
+    /// Toggle quest log overlay
+    pub fn toggle_quest_log(&mut self) {
+        if matches!(self.overlay, Some(Overlay::QuestLog)) {
+            self.overlay = None;
+        } else {
+            self.overlay = Some(Overlay::QuestLog);
         }
     }
 
@@ -363,18 +433,19 @@ impl App {
     }
 
     /// Process a colon command
-    pub fn process_command(&mut self, command: &str) -> bool {
+    /// Returns (handled, needs_worker_request)
+    pub fn process_command(&mut self, command: &str) -> (bool, Option<WorkerRequest>) {
         let cmd = command.trim_start_matches(':');
         let parts: Vec<&str> = cmd.split_whitespace().collect();
 
         if parts.is_empty() {
-            return false;
+            return (false, None);
         }
 
         match parts[0] {
             "q" | "quit" | "exit" => {
                 self.should_quit = true;
-                true
+                (true, None)
             }
             "w" | "save" => {
                 let filename = if parts.len() > 1 {
@@ -382,9 +453,8 @@ impl App {
                 } else {
                     "campaign.json".to_string()
                 };
-                self.pending_save = Some(PathBuf::from(filename));
                 self.set_status("Saving...");
-                true
+                (true, Some(WorkerRequest::Save(PathBuf::from(filename))))
             }
             "load" => {
                 let filename = if parts.len() > 1 {
@@ -392,19 +462,20 @@ impl App {
                 } else {
                     "campaign.json".to_string()
                 };
-                self.pending_load = Some(PathBuf::from(filename));
                 self.set_status("Loading...");
-                true
+                (true, Some(WorkerRequest::Load(PathBuf::from(filename))))
             }
             "wq" => {
-                self.pending_save = Some(PathBuf::from("campaign.json"));
                 self.set_status("Saving and quitting...");
                 self.quit_after_save = true;
-                true
+                (
+                    true,
+                    Some(WorkerRequest::Save(PathBuf::from("campaign.json"))),
+                )
             }
             "help" | "h" => {
                 self.toggle_help();
-                true
+                (true, None)
             }
             "roll" | "r" => {
                 if parts.len() > 1 {
@@ -413,65 +484,49 @@ impl App {
                 } else {
                     self.set_status("Usage: :roll XdY+Z");
                 }
-                true
+                (true, None)
             }
             "rest" => {
-                if parts.len() > 1 && parts[1] == "long" {
-                    self.session.world_mut().long_rest();
-                    self.add_narrative(
-                        "You take a long rest, recovering fully.".to_string(),
-                        NarrativeType::System,
-                    );
-                } else {
-                    self.session.world_mut().short_rest();
-                    self.add_narrative("You take a short rest.".to_string(), NarrativeType::System);
-                }
-                true
+                // Rest commands can't be done directly anymore since we don't own session
+                // We'd need to send a request to the worker
+                // For now, just show a message that this should be done via player action
+                self.set_status("Use 'I take a short rest' or 'I take a long rest' in-game");
+                (true, None)
             }
             _ => {
                 self.set_status(format!("Unknown command: {}", parts[0]));
-                false
+                (false, None)
             }
         }
     }
 
-    /// Process player input (gets DM response without adding input to narrative).
-    ///
-    /// The caller is responsible for adding the player input to narrative before calling this,
-    /// which allows the input to be displayed immediately before the async processing begins.
-    pub async fn process_player_input_without_echo(
-        &mut self,
-        input: &str,
-    ) -> Result<(), SessionError> {
-        let input = input.trim();
-        if input.is_empty() {
-            return Ok(());
+    /// Send a player action to the AI worker
+    pub fn send_player_action(&mut self, input: String) {
+        if input.trim().is_empty() {
+            return;
         }
 
         self.ai_processing = true;
+        self.set_status("Processing...");
 
-        // Get DM response
-        match self.session.player_action(input).await {
-            Ok(response) => {
-                // Process game effects first (for dice rolls, combat, etc.)
-                process_effects(self, &response.effects);
-
-                // Add the narrative
-                self.add_narrative(response.narrative, NarrativeType::DmNarration);
-
-                if response.in_combat {
-                    self.set_status("In combat!");
-                } else {
-                    self.clear_status();
-                }
-            }
-            Err(e) => {
-                self.set_status(format!("Error: {e}"));
-            }
+        // Try to send the request (non-blocking)
+        if self.request_tx.try_send(WorkerRequest::PlayerAction(input)).is_err() {
+            self.set_status("Worker busy, please wait...");
+            self.ai_processing = false;
         }
+    }
 
-        self.ai_processing = false;
-        Ok(())
+    /// Send a cancel request to the AI worker
+    pub fn cancel_processing(&mut self) {
+        if self.ai_processing {
+            let _ = self.request_tx.try_send(WorkerRequest::Cancel);
+            self.set_status("Cancelling...");
+        }
+    }
+
+    /// Update world state from a WorldUpdate
+    pub fn apply_world_update(&mut self, update: WorldUpdate) {
+        self.world = update;
     }
 
     /// Tick for animations
@@ -549,24 +604,6 @@ impl App {
         self.status_message = None;
     }
 
-    /// Take a short rest
-    pub fn short_rest(&mut self) {
-        self.session.world_mut().short_rest();
-        self.add_narrative(
-            "You take a short rest to catch your breath.".to_string(),
-            NarrativeType::System,
-        );
-    }
-
-    /// Take a long rest
-    pub fn long_rest(&mut self) {
-        self.session.world_mut().long_rest();
-        self.add_narrative(
-            "You take a long rest, recovering fully.".to_string(),
-            NarrativeType::System,
-        );
-    }
-
     // =========================================================================
     // Getters for private fields
     // =========================================================================
@@ -623,10 +660,10 @@ impl App {
         };
     }
 
-    /// Set input buffer content and move cursor to end
+    /// Set input buffer content and move cursor to end (unicode-safe)
     pub fn set_input(&mut self, content: impl Into<String>) {
         self.input_buffer = content.into();
-        self.cursor_position = self.input_buffer.len();
+        self.cursor_position = self.input_buffer.chars().count();
     }
 
     /// Clear the input buffer

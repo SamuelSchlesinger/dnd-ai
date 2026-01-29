@@ -85,14 +85,19 @@ impl Widget for InputWidget<'_> {
                 self.cursor_position
             };
 
-            let before_cursor = &display_content[..adjusted_cursor.min(display_content.len())];
+            // Use character-based slicing for unicode safety
+            let before_cursor: String = display_content.chars().take(adjusted_cursor).collect();
             let at_cursor = display_content
                 .chars()
                 .nth(adjusted_cursor)
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| " ".to_string());
-            let after_cursor = if adjusted_cursor < display_content.len() {
-                display_content.chars().skip(adjusted_cursor + 1).collect::<String>()
+            let char_count = display_content.chars().count();
+            let after_cursor = if adjusted_cursor < char_count {
+                display_content
+                    .chars()
+                    .skip(adjusted_cursor + 1)
+                    .collect::<String>()
             } else {
                 String::new()
             };
