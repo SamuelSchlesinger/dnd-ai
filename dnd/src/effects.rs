@@ -226,6 +226,22 @@ pub fn process_effect(app: &mut App, effect: &Effect) {
             // Story memory storage is handled in the DM agent
         }
 
+        // ConsequenceRegistered is handled by the DM agent internally
+        Effect::ConsequenceRegistered { .. } => {
+            // Consequence storage is handled in the DM agent
+        }
+
+        // ConsequenceTriggered means a stored consequence was activated
+        Effect::ConsequenceTriggered {
+            consequence_description,
+            ..
+        } => {
+            app.add_narrative(
+                format!("CONSEQUENCE: {consequence_description}"),
+                NarrativeType::System,
+            );
+        }
+
         // Inventory effects
         Effect::ItemAdded {
             item_name,

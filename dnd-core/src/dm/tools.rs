@@ -30,6 +30,7 @@ impl DmTools {
             Self::short_rest(),
             Self::long_rest(),
             Self::remember_fact(),
+            Self::register_consequence(),
             // Inventory tools
             Self::give_item(),
             Self::remove_item(),
@@ -141,6 +142,48 @@ impl DmTools {
                     }
                 },
                 "required": ["subject_name", "subject_type", "fact", "category"]
+            }),
+        }
+    }
+
+    fn register_consequence() -> Tool {
+        Tool {
+            name: "register_consequence".to_string(),
+            description: "Register a future consequence based on player actions. Use this when something the player does should have future ramifications - like making an enemy, breaking a law, or triggering a curse. The consequence will be surfaced when relevant conditions arise.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "trigger_description": {
+                        "type": "string",
+                        "description": "Natural language description of when this consequence should trigger (e.g., 'Player enters Riverside village', 'Player encounters Baron Aldric', 'Player tries to sleep')"
+                    },
+                    "consequence_description": {
+                        "type": "string",
+                        "description": "Natural language description of what happens when triggered (e.g., 'Town guards attempt to arrest the player for crimes against the baron', 'The curse drains 1d6 HP')"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": ["minor", "moderate", "major", "critical"],
+                        "description": "How severe this consequence is. Minor=flavor/inconvenience, Moderate=meaningful impact, Major=significant story impact, Critical=life-threatening"
+                    },
+                    "related_entities": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Names of entities involved (NPCs, locations, organizations)"
+                    },
+                    "importance": {
+                        "type": "number",
+                        "minimum": 0.1,
+                        "maximum": 1.0,
+                        "description": "How important this consequence is for relevance ranking (0.1-1.0, default based on severity)"
+                    },
+                    "expires_in_turns": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of turns until this consequence expires (omit for permanent consequences)"
+                    }
+                },
+                "required": ["trigger_description", "consequence_description", "severity"]
             }),
         }
     }
@@ -748,6 +791,38 @@ pub fn parse_tool_call(name: &str, input: &Value, world: &GameWorld) -> Option<I
                 category,
                 related_entities,
                 importance,
+            })
+        }
+        "register_consequence" => {
+            let trigger_description = input["trigger_description"].as_str()?.to_string();
+            let consequence_description = input["consequence_description"].as_str()?.to_string();
+            let severity = input["severity"].as_str()?.to_string();
+            let related_entities = input["related_entities"]
+                .as_array()
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            // Default importance based on severity
+            let default_importance = match severity.as_str() {
+                "minor" => 0.3,
+                "moderate" => 0.5,
+                "major" => 0.8,
+                "critical" => 1.0,
+                _ => 0.5,
+            };
+            let importance = input["importance"].as_f64().unwrap_or(default_importance) as f32;
+            let expires_in_turns = input["expires_in_turns"].as_u64().map(|v| v as u32);
+
+            Some(Intent::RegisterConsequence {
+                trigger_description,
+                consequence_description,
+                severity,
+                related_entities,
+                importance,
+                expires_in_turns,
             })
         }
         // Inventory tools

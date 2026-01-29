@@ -2155,6 +2155,7 @@ version = "0.1.0"
 dependencies = [
  "claude",
  "dnd-macros",
+ "dotenvy",
  "futures",
  "lazy_static",
  "rand",

@@ -309,6 +309,23 @@ pub fn process_effect(
             // Internal - no UI effect
         }
 
+        Effect::ConsequenceRegistered { .. } => {
+            // Internal - no UI effect
+        }
+
+        Effect::ConsequenceTriggered {
+            consequence_description,
+            ..
+        } => {
+            // Visual effect for consequence triggering
+            animations::spawn_combat_effect(commands, EffectType::ScreenShake, Vec2::ZERO, 0.4);
+            app_state.add_narrative(
+                format!("CONSEQUENCE: {consequence_description}"),
+                NarrativeType::System,
+                time,
+            );
+        }
+
         Effect::ItemAdded {
             item_name,
             quantity,

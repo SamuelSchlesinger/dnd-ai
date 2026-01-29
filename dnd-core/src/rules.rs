@@ -190,6 +190,22 @@ pub enum Intent {
         location_type: Option<String>,
         description: Option<String>,
     },
+
+    /// Register a consequence for future triggering
+    RegisterConsequence {
+        /// Natural language description of when this triggers
+        trigger_description: String,
+        /// Natural language description of what happens when triggered
+        consequence_description: String,
+        /// Severity level: minor, moderate, major, critical
+        severity: String,
+        /// Names of related entities
+        related_entities: Vec<String>,
+        /// Importance score (0.0 to 1.0)
+        importance: f32,
+        /// Number of turns until this expires (None = never expires)
+        expires_in_turns: Option<u32>,
+    },
 }
 
 /// Initial combatant data for starting combat.
@@ -471,6 +487,22 @@ pub enum Effect {
         previous_location: String,
         new_location: String,
     },
+
+    /// A consequence was registered for future triggering
+    ConsequenceRegistered {
+        /// Unique identifier (as string for serialization)
+        consequence_id: String,
+        trigger_description: String,
+        consequence_description: String,
+        severity: String,
+    },
+
+    /// A consequence was triggered
+    ConsequenceTriggered {
+        /// Unique identifier (as string for serialization)
+        consequence_id: String,
+        consequence_description: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -623,6 +655,21 @@ impl RulesEngine {
                 location_type,
                 description,
             } => self.resolve_change_location(world, &new_location, location_type, description),
+            Intent::RegisterConsequence {
+                trigger_description,
+                consequence_description,
+                severity,
+                related_entities,
+                importance,
+                expires_in_turns,
+            } => self.resolve_register_consequence(
+                &trigger_description,
+                &consequence_description,
+                &severity,
+                &related_entities,
+                importance,
+                expires_in_turns,
+            ),
             #[allow(unreachable_patterns)]
             _ => Resolution::new("Intent not yet implemented"),
         }
@@ -1896,6 +1943,42 @@ impl RulesEngine {
             new_location: new_location.to_string(),
         })
     }
+
+    fn resolve_register_consequence(
+        &self,
+        trigger_description: &str,
+        consequence_description: &str,
+        severity: &str,
+        _related_entities: &[String],
+        importance: f32,
+        expires_in_turns: Option<u32>,
+    ) -> Resolution {
+        // Generate a unique ID for this consequence
+        let consequence_id = uuid::Uuid::new_v4().to_string();
+
+        let severity_display = match severity.to_lowercase().as_str() {
+            "minor" => "minor",
+            "moderate" => "moderate",
+            "major" => "major",
+            "critical" => "critical",
+            _ => "moderate",
+        };
+
+        let expiry_note = match expires_in_turns {
+            Some(turns) => format!(" (expires in {turns} turns)"),
+            None => String::new(),
+        };
+
+        Resolution::new(format!(
+            "Consequence registered: If {trigger_description}, then {consequence_description} ({severity_display} severity, importance {importance:.1}){expiry_note}"
+        ))
+        .with_effect(Effect::ConsequenceRegistered {
+            consequence_id,
+            trigger_description: trigger_description.to_string(),
+            consequence_description: consequence_description.to_string(),
+            severity: severity_display.to_string(),
+        })
+    }
 }
 
 #[allow(dead_code)]
@@ -2226,6 +2309,14 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
         }
         Effect::LocationChanged { new_location, .. } => {
             world.current_location.name = new_location.clone();
+        }
+        Effect::ConsequenceRegistered { .. } => {
+            // Consequence storage is handled by the DM agent in story_memory
+            // This effect is informational for the rules layer
+        }
+        Effect::ConsequenceTriggered { .. } => {
+            // Consequence triggering is handled by the relevance checker
+            // This effect is informational for the UI/narrative
         }
     }
 }

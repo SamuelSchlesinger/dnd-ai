@@ -5,7 +5,10 @@
 //! and tool calls that are resolved by the RulesEngine.
 
 use super::memory::{DmMemory, FactCategory};
-use super::story_memory::{EntityType, FactCategory as StoryFactCategory, FactSource, StoryMemory};
+use super::relevance::{RelevanceChecker, RelevanceResult};
+use super::story_memory::{
+    ConsequenceSeverity, EntityType, FactCategory as StoryFactCategory, FactSource, StoryMemory,
+};
 use super::tools::{execute_info_tool, parse_tool_call, DmTools};
 use crate::rules::{apply_effects, Effect, Intent, Resolution, RulesEngine};
 use crate::world::{GameMode, GameWorld, NarrativeType};
@@ -143,8 +146,20 @@ impl DungeonMaster {
         // Add to game world narrative
         world.add_narrative(player_input.to_string(), NarrativeType::PlayerAction);
 
+        // Check for relevant consequences using fast model (Haiku)
+        let relevance_result = self.check_relevance(player_input, world).await?;
+
+        // Mark triggered consequences
+        self.apply_relevance_results(&relevance_result);
+
         // Build system prompt with story context for this input
-        let system_prompt = self.build_system_prompt(world, player_input);
+        let mut system_prompt = self.build_system_prompt(world, player_input);
+
+        // Add triggered consequences to context
+        let triggered_context = self.build_triggered_consequences_context(&relevance_result);
+        if !triggered_context.is_empty() {
+            system_prompt.push_str(&triggered_context);
+        }
 
         // Track intents, effects, and resolutions
         let mut all_intents = Vec::new();
@@ -217,25 +232,39 @@ impl DungeonMaster {
                     // Apply effects to world
                     apply_effects(world, &resolution.effects);
 
-                    // Handle FactRemembered effects specially - store in story memory
+                    // Handle FactRemembered and ConsequenceRegistered effects specially - store in story memory
                     for effect in &resolution.effects {
-                        if let Effect::FactRemembered {
-                            subject_name,
-                            subject_type,
-                            fact,
-                            category,
-                            related_entities,
-                            importance,
-                        } = effect
-                        {
-                            self.store_fact(
+                        match effect {
+                            Effect::FactRemembered {
                                 subject_name,
                                 subject_type,
                                 fact,
                                 category,
                                 related_entities,
-                                *importance,
-                            );
+                                importance,
+                            } => {
+                                self.store_fact(
+                                    subject_name,
+                                    subject_type,
+                                    fact,
+                                    category,
+                                    related_entities,
+                                    *importance,
+                                );
+                            }
+                            Effect::ConsequenceRegistered {
+                                trigger_description,
+                                consequence_description,
+                                severity,
+                                ..
+                            } => {
+                                self.store_consequence(
+                                    trigger_description,
+                                    consequence_description,
+                                    severity,
+                                );
+                            }
+                            _ => {}
                         }
                     }
 
@@ -300,8 +329,20 @@ impl DungeonMaster {
         // Add to game world narrative
         world.add_narrative(player_input.to_string(), NarrativeType::PlayerAction);
 
+        // Check for relevant consequences using fast model (Haiku)
+        let relevance_result = self.check_relevance(player_input, world).await?;
+
+        // Mark triggered consequences
+        self.apply_relevance_results(&relevance_result);
+
         // Build system prompt with story context for this input
-        let system_prompt = self.build_system_prompt(world, player_input);
+        let mut system_prompt = self.build_system_prompt(world, player_input);
+
+        // Add triggered consequences to context
+        let triggered_context = self.build_triggered_consequences_context(&relevance_result);
+        if !triggered_context.is_empty() {
+            system_prompt.push_str(&triggered_context);
+        }
 
         // Track intents, effects, and resolutions
         let mut all_intents = Vec::new();
@@ -445,25 +486,39 @@ impl DungeonMaster {
                     // Apply effects to world
                     apply_effects(world, &resolution.effects);
 
-                    // Handle FactRemembered effects specially - store in story memory
+                    // Handle FactRemembered and ConsequenceRegistered effects specially - store in story memory
                     for effect in &resolution.effects {
-                        if let Effect::FactRemembered {
-                            subject_name,
-                            subject_type,
-                            fact,
-                            category,
-                            related_entities,
-                            importance,
-                        } = effect
-                        {
-                            self.store_fact(
+                        match effect {
+                            Effect::FactRemembered {
                                 subject_name,
                                 subject_type,
                                 fact,
                                 category,
                                 related_entities,
-                                *importance,
-                            );
+                                importance,
+                            } => {
+                                self.store_fact(
+                                    subject_name,
+                                    subject_type,
+                                    fact,
+                                    category,
+                                    related_entities,
+                                    *importance,
+                                );
+                            }
+                            Effect::ConsequenceRegistered {
+                                trigger_description,
+                                consequence_description,
+                                severity,
+                                ..
+                            } => {
+                                self.store_consequence(
+                                    trigger_description,
+                                    consequence_description,
+                                    severity,
+                                );
+                            }
+                            _ => {}
                         }
                     }
 
@@ -747,6 +802,83 @@ impl DungeonMaster {
             &mentioned_ids,
             importance,
         );
+    }
+
+    /// Store a consequence in story memory.
+    fn store_consequence(
+        &mut self,
+        trigger_description: &str,
+        consequence_description: &str,
+        severity: &str,
+    ) {
+        let severity_enum = match severity.to_lowercase().as_str() {
+            "minor" => ConsequenceSeverity::Minor,
+            "moderate" => ConsequenceSeverity::Moderate,
+            "major" => ConsequenceSeverity::Major,
+            "critical" => ConsequenceSeverity::Critical,
+            _ => ConsequenceSeverity::Moderate,
+        };
+
+        self.story_memory.create_consequence(
+            trigger_description,
+            consequence_description,
+            severity_enum,
+        );
+    }
+
+    /// Check relevance of stored context against player input using a fast model.
+    ///
+    /// Returns triggered consequences and relevant entities that should be
+    /// included in the DM's context.
+    pub async fn check_relevance(
+        &self,
+        player_input: &str,
+        world: &GameWorld,
+    ) -> Result<RelevanceResult, DmError> {
+        // Only check if we have pending consequences
+        if self.story_memory.pending_consequence_count() == 0 {
+            return Ok(RelevanceResult::default());
+        }
+
+        let checker = RelevanceChecker::new(self.client.clone());
+        let result = checker
+            .check_relevance(player_input, &world.current_location.name, &self.story_memory)
+            .await
+            .map_err(|e| DmError::ToolError(format!("Relevance check failed: {e}")))?;
+
+        Ok(result)
+    }
+
+    /// Mark consequences as triggered based on relevance check results.
+    pub fn apply_relevance_results(&mut self, results: &RelevanceResult) {
+        for consequence_id in &results.triggered_consequences {
+            self.story_memory.trigger_consequence(*consequence_id);
+        }
+    }
+
+    /// Build additional context for triggered consequences.
+    fn build_triggered_consequences_context(&self, results: &RelevanceResult) -> String {
+        if results.triggered_consequences.is_empty() {
+            return String::new();
+        }
+
+        let mut context = String::new();
+        context.push_str("\n## TRIGGERED CONSEQUENCES - ACT ON THESE!\n");
+        context.push_str("The following consequences have been triggered by the player's action:\n\n");
+
+        for id in &results.triggered_consequences {
+            if let Some(consequence) = self.story_memory.get_consequence(*id) {
+                context.push_str(&format!(
+                    "- **{}** ({}): {}\n",
+                    consequence.severity.name(),
+                    consequence.trigger_description,
+                    consequence.consequence_description
+                ));
+            }
+        }
+
+        context.push_str("\nYou MUST incorporate these consequences into your response!\n");
+        context
     }
 }
 

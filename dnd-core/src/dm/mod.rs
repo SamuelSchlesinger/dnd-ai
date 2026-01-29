@@ -5,13 +5,16 @@
 
 mod agent;
 pub mod memory;
+pub mod relevance;
 pub mod story_memory;
 mod tools;
 
 pub use agent::{DmConfig, DmError, DmResponse, DungeonMaster};
 pub use memory::{CampaignFact, DmMemory, FactCategory};
+pub use relevance::{RelevanceChecker, RelevanceError, RelevanceResult};
 pub use story_memory::{
-    Entity, EntityId, EntityType, FactCategory as StoryFactCategory, FactSource, Relationship,
-    RelationshipType, StoryFact, StoryMemory, StoryMoment,
+    Consequence, ConsequenceId, ConsequenceSeverity, ConsequenceStatus, Entity, EntityId,
+    EntityType, FactCategory as StoryFactCategory, FactSource, Relationship, RelationshipType,
+    StoryFact, StoryMemory, StoryMoment,
 };
 pub use tools::DmTools;

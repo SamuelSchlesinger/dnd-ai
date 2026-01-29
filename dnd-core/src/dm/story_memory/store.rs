@@ -1,5 +1,8 @@
 //! Story memory store for entity and fact management.
 
+use super::consequence::{Consequence, ConsequenceId, ConsequenceSeverity};
+#[cfg(test)]
+use super::consequence::ConsequenceStatus;
 use super::entity::{Entity, EntityId, EntityType};
 use super::fact::{FactCategory, FactSource, StoryFact};
 use super::relationship::{Relationship, RelationshipType};
@@ -10,8 +13,14 @@ use std::collections::HashMap;
 /// Maximum facts to include in context.
 const MAX_CONTEXT_FACTS: usize = 30;
 
+/// Maximum consequences to include in relevance checking.
+const MAX_CONTEXT_CONSEQUENCES: usize = 20;
+
 /// Importance decay rate per turn.
 const IMPORTANCE_DECAY_PER_TURN: f32 = 0.02;
+
+/// Consequence decay rate per turn (slower than facts).
+const CONSEQUENCE_DECAY_PER_TURN: f32 = 0.01;
 
 /// The main story memory store.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -24,6 +33,9 @@ pub struct StoryMemory {
     facts: Vec<StoryFact>,
     /// All relationships.
     relationships: Vec<Relationship>,
+    /// All pending consequences.
+    #[serde(default)]
+    consequences: Vec<Consequence>,
     /// Current turn number.
     current_turn: u32,
 }
@@ -56,6 +68,14 @@ impl StoryMemory {
                 IMPORTANCE_DECAY_PER_TURN
             };
             fact.decay_importance(rate);
+        }
+
+        // Check consequence expiry and decay importance
+        for consequence in &mut self.consequences {
+            consequence.check_expiry(self.current_turn);
+            if consequence.status.is_active() {
+                consequence.decay_importance(CONSEQUENCE_DECAY_PER_TURN);
+            }
         }
     }
 
@@ -292,6 +312,142 @@ impl StoryMemory {
         self.relationships
             .iter_mut()
             .find(|r| r.from_entity == from_id && r.to_entity == to_id && r.is_active)
+    }
+
+    // =========================================================================
+    // Consequence Management
+    // =========================================================================
+
+    /// Add a consequence.
+    pub fn add_consequence(&mut self, consequence: Consequence) -> ConsequenceId {
+        let id = consequence.id;
+        self.consequences.push(consequence);
+        id
+    }
+
+    /// Create and add a new consequence.
+    pub fn create_consequence(
+        &mut self,
+        trigger_description: impl Into<String>,
+        consequence_description: impl Into<String>,
+        severity: ConsequenceSeverity,
+    ) -> ConsequenceId {
+        let consequence = Consequence::new(
+            trigger_description,
+            consequence_description,
+            severity,
+            self.current_turn,
+        );
+        self.add_consequence(consequence)
+    }
+
+    /// Create a consequence with an expiry.
+    pub fn create_consequence_with_expiry(
+        &mut self,
+        trigger_description: impl Into<String>,
+        consequence_description: impl Into<String>,
+        severity: ConsequenceSeverity,
+        expires_in_turns: u32,
+    ) -> ConsequenceId {
+        let consequence = Consequence::new(
+            trigger_description,
+            consequence_description,
+            severity,
+            self.current_turn,
+        )
+        .with_expiry(self.current_turn + expires_in_turns);
+        self.add_consequence(consequence)
+    }
+
+    /// Get a consequence by ID.
+    pub fn get_consequence(&self, id: ConsequenceId) -> Option<&Consequence> {
+        self.consequences.iter().find(|c| c.id == id)
+    }
+
+    /// Get a mutable consequence by ID.
+    pub fn get_consequence_mut(&mut self, id: ConsequenceId) -> Option<&mut Consequence> {
+        self.consequences.iter_mut().find(|c| c.id == id)
+    }
+
+    /// Get all pending (active) consequences.
+    pub fn pending_consequences(&self) -> Vec<&Consequence> {
+        self.consequences
+            .iter()
+            .filter(|c| c.status.is_active())
+            .collect()
+    }
+
+    /// Get pending consequences sorted by importance.
+    pub fn pending_consequences_by_importance(&self) -> Vec<&Consequence> {
+        let mut consequences: Vec<_> = self.pending_consequences();
+        consequences.sort_by(|a, b| {
+            b.importance
+                .partial_cmp(&a.importance)
+                .unwrap_or(Ordering::Equal)
+        });
+        consequences
+    }
+
+    /// Get consequences involving a specific entity.
+    pub fn consequences_involving(&self, entity_id: EntityId) -> Vec<&Consequence> {
+        self.consequences
+            .iter()
+            .filter(|c| c.status.is_active() && c.involves(entity_id))
+            .collect()
+    }
+
+    /// Mark a consequence as triggered.
+    pub fn trigger_consequence(&mut self, id: ConsequenceId) -> bool {
+        if let Some(consequence) = self.get_consequence_mut(id) {
+            consequence.trigger();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Mark a consequence as resolved (handled without triggering).
+    pub fn resolve_consequence(&mut self, id: ConsequenceId) -> bool {
+        if let Some(consequence) = self.get_consequence_mut(id) {
+            consequence.resolve();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get the total number of consequences (all statuses).
+    pub fn consequence_count(&self) -> usize {
+        self.consequences.len()
+    }
+
+    /// Get the number of pending consequences.
+    pub fn pending_consequence_count(&self) -> usize {
+        self.consequences
+            .iter()
+            .filter(|c| c.status.is_active())
+            .count()
+    }
+
+    /// Build context string for pending consequences.
+    /// This is used by the relevance checker.
+    pub fn build_consequences_for_relevance(&self) -> String {
+        let pending = self.pending_consequences_by_importance();
+        if pending.is_empty() {
+            return String::new();
+        }
+
+        let mut context = String::new();
+        for (i, consequence) in pending.iter().take(MAX_CONTEXT_CONSEQUENCES).enumerate() {
+            context.push_str(&format!(
+                "{}. [{}] TRIGGER: {} -> EFFECT: {}\n",
+                i + 1,
+                consequence.id,
+                consequence.trigger_description,
+                consequence.consequence_description
+            ));
+        }
+        context
     }
 
     // =========================================================================
@@ -742,5 +898,113 @@ mod tests {
         let context = store.build_context_for_input("I speak to Gandalf");
         assert!(context.contains("Gandalf"));
         assert!(context.contains("powerful wizard"));
+    }
+
+    #[test]
+    fn test_consequence_creation() {
+        let mut store = StoryMemory::new();
+
+        let id = store.create_consequence(
+            "Player enters Riverside",
+            "Guards attempt arrest",
+            ConsequenceSeverity::Major,
+        );
+
+        assert_eq!(store.consequence_count(), 1);
+        assert_eq!(store.pending_consequence_count(), 1);
+
+        let consequence = store.get_consequence(id).unwrap();
+        assert!(consequence.status.is_active());
+        assert_eq!(consequence.severity, ConsequenceSeverity::Major);
+    }
+
+    #[test]
+    fn test_consequence_trigger() {
+        let mut store = StoryMemory::new();
+
+        let id = store.create_consequence(
+            "Player enters tavern",
+            "Bounty hunter attacks",
+            ConsequenceSeverity::Critical,
+        );
+
+        assert!(store.trigger_consequence(id));
+        assert_eq!(store.pending_consequence_count(), 0);
+
+        let consequence = store.get_consequence(id).unwrap();
+        assert_eq!(consequence.status, ConsequenceStatus::Triggered);
+    }
+
+    #[test]
+    fn test_consequence_expiry() {
+        let mut store = StoryMemory::new();
+
+        let id = store.create_consequence_with_expiry(
+            "Wolves are hunting in the forest",
+            "Wolves attack",
+            ConsequenceSeverity::Moderate,
+            5, // Expires in 5 turns
+        );
+
+        // Advance time but not enough to expire
+        for _ in 0..4 {
+            store.advance_turn();
+        }
+        assert_eq!(store.pending_consequence_count(), 1);
+
+        // One more turn - should expire
+        store.advance_turn();
+        assert_eq!(store.pending_consequence_count(), 0);
+
+        let consequence = store.get_consequence(id).unwrap();
+        assert_eq!(consequence.status, ConsequenceStatus::Expired);
+    }
+
+    #[test]
+    fn test_consequences_by_importance() {
+        let mut store = StoryMemory::new();
+
+        store.create_consequence(
+            "Minor trigger",
+            "Minor effect",
+            ConsequenceSeverity::Minor,
+        );
+        store.create_consequence(
+            "Critical trigger",
+            "Critical effect",
+            ConsequenceSeverity::Critical,
+        );
+        store.create_consequence(
+            "Moderate trigger",
+            "Moderate effect",
+            ConsequenceSeverity::Moderate,
+        );
+
+        let sorted = store.pending_consequences_by_importance();
+        assert_eq!(sorted.len(), 3);
+        // Critical should be first (highest importance)
+        assert_eq!(sorted[0].severity, ConsequenceSeverity::Critical);
+        // Minor should be last (lowest importance)
+        assert_eq!(sorted[2].severity, ConsequenceSeverity::Minor);
+    }
+
+    #[test]
+    fn test_consequence_involving_entity() {
+        let mut store = StoryMemory::new();
+
+        let npc_id = store.create_entity(EntityType::Npc, "Baron Aldric");
+
+        let consequence = Consequence::new(
+            "Player enters Riverside",
+            "Baron's guards arrest player",
+            ConsequenceSeverity::Major,
+            store.current_turn(),
+        )
+        .with_subject(npc_id);
+
+        store.add_consequence(consequence);
+
+        let involving = store.consequences_involving(npc_id);
+        assert_eq!(involving.len(), 1);
     }
 }

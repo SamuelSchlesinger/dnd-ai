@@ -421,4 +421,281 @@ mod tests {
             .narrative
             .contains("no more scripted"));
     }
+
+    #[test]
+    fn test_consequence_system_end_to_end() {
+        use crate::dm::story_memory::{
+            Consequence, ConsequenceSeverity, ConsequenceStatus, EntityType,
+        };
+
+        // 1. Create a test harness
+        let mut harness = TestHarness::new();
+
+        // 2. Create an entity that will be associated with a consequence
+        let baron_id = harness
+            .dm
+            .story_memory_mut()
+            .create_entity(EntityType::Npc, "Baron Aldric");
+
+        // Also create a location entity
+        let riverside_id = harness
+            .dm
+            .story_memory_mut()
+            .create_entity(EntityType::Location, "Riverside");
+
+        // 3. Add a consequence tied to the entity
+        let consequence = Consequence::new(
+            "The player enters Riverside village or its surrounding area",
+            "Baron Aldric's guards recognize the player and attempt to arrest them for past crimes",
+            ConsequenceSeverity::Major,
+            harness.dm.story_memory().current_turn(),
+        )
+        .with_subject(baron_id)
+        .with_related(riverside_id)
+        .with_source("Player was caught stealing from Baron Aldric's treasury");
+
+        let consequence_id = harness.dm.story_memory_mut().add_consequence(consequence);
+
+        // 4. Verify the consequence is stored
+        assert_eq!(
+            harness.dm.story_memory().consequence_count(),
+            1,
+            "Should have exactly one consequence stored"
+        );
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            1,
+            "Should have exactly one pending consequence"
+        );
+
+        // 5. Verify we can retrieve the consequence
+        let stored = harness.dm.story_memory().get_consequence(consequence_id);
+        assert!(stored.is_some(), "Should be able to retrieve consequence by ID");
+
+        let stored = stored.unwrap();
+        assert_eq!(stored.severity, ConsequenceSeverity::Major);
+        assert!(stored.status.is_active());
+        assert!(
+            stored.trigger_description.contains("Riverside"),
+            "Trigger should mention Riverside"
+        );
+        assert!(
+            stored.consequence_description.contains("Baron Aldric"),
+            "Consequence should mention Baron Aldric"
+        );
+
+        // 6. Verify the consequence involves the correct entities
+        assert!(
+            stored.involves(baron_id),
+            "Consequence should involve Baron Aldric"
+        );
+        assert!(
+            stored.involves(riverside_id),
+            "Consequence should involve Riverside"
+        );
+
+        // 7. Test the relevance context building (data flow verification)
+        let relevance_context = harness.dm.story_memory().build_consequences_for_relevance();
+        assert!(
+            !relevance_context.is_empty(),
+            "Relevance context should not be empty"
+        );
+        assert!(
+            relevance_context.contains("Riverside"),
+            "Relevance context should mention the trigger location"
+        );
+        assert!(
+            relevance_context.contains("Baron Aldric"),
+            "Relevance context should mention the consequence effect"
+        );
+        assert!(
+            relevance_context.contains("TRIGGER:"),
+            "Relevance context should have TRIGGER markers"
+        );
+        assert!(
+            relevance_context.contains("EFFECT:"),
+            "Relevance context should have EFFECT markers"
+        );
+
+        // 8. Test consequences_involving lookup
+        let baron_consequences = harness.dm.story_memory().consequences_involving(baron_id);
+        assert_eq!(
+            baron_consequences.len(),
+            1,
+            "Should find one consequence involving Baron"
+        );
+
+        let riverside_consequences = harness.dm.story_memory().consequences_involving(riverside_id);
+        assert_eq!(
+            riverside_consequences.len(),
+            1,
+            "Should find one consequence involving Riverside"
+        );
+
+        // 9. Test triggering the consequence
+        assert!(
+            harness.dm.story_memory_mut().trigger_consequence(consequence_id),
+            "Should successfully trigger consequence"
+        );
+
+        // 10. Verify the consequence is no longer pending
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            0,
+            "Should have no pending consequences after triggering"
+        );
+
+        let triggered = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        assert_eq!(
+            triggered.status,
+            ConsequenceStatus::Triggered,
+            "Consequence should be in Triggered status"
+        );
+        assert!(
+            !triggered.status.is_active(),
+            "Triggered consequence should not be active"
+        );
+
+        // 11. Test that pending_consequences doesn't include triggered ones
+        let pending = harness.dm.story_memory().pending_consequences();
+        assert!(
+            pending.is_empty(),
+            "Pending consequences should not include triggered ones"
+        );
+    }
+
+    #[test]
+    fn test_consequence_expiry_through_harness() {
+        use crate::dm::story_memory::{ConsequenceSeverity, ConsequenceStatus};
+
+        let mut harness = TestHarness::new();
+
+        // Create a consequence that expires in 3 turns
+        let consequence_id = harness.dm.story_memory_mut().create_consequence_with_expiry(
+            "Player is in the haunted forest at midnight",
+            "Ghostly apparitions attack",
+            ConsequenceSeverity::Moderate,
+            3,
+        );
+
+        assert_eq!(harness.dm.story_memory().pending_consequence_count(), 1);
+
+        // Simulate game turns through DM input processing (advances story memory turn)
+        harness.expect_narrative("Turn 1");
+        harness.expect_narrative("Turn 2");
+        harness.expect_narrative("Turn 3");
+
+        harness.input("action 1");
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            1,
+            "Should still be pending after turn 1"
+        );
+
+        harness.input("action 2");
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            1,
+            "Should still be pending after turn 2"
+        );
+
+        harness.input("action 3");
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            0,
+            "Should be expired after turn 3"
+        );
+
+        let consequence = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        assert_eq!(
+            consequence.status,
+            ConsequenceStatus::Expired,
+            "Consequence should be expired"
+        );
+    }
+
+    #[test]
+    fn test_consequence_importance_decay() {
+        use crate::dm::story_memory::ConsequenceSeverity;
+
+        let mut harness = TestHarness::new();
+
+        // Create a consequence
+        let consequence_id = harness.dm.story_memory_mut().create_consequence(
+            "Player returns to the thieves guild",
+            "Thieves demand payment",
+            ConsequenceSeverity::Moderate,
+        );
+
+        let initial_importance = harness
+            .dm
+            .story_memory()
+            .get_consequence(consequence_id)
+            .unwrap()
+            .importance;
+
+        // Advance several turns
+        for i in 0..10 {
+            harness.expect_narrative(format!("Turn {}", i + 1));
+            harness.input(&format!("action {}", i + 1));
+        }
+
+        let final_importance = harness
+            .dm
+            .story_memory()
+            .get_consequence(consequence_id)
+            .unwrap()
+            .importance;
+
+        assert!(
+            final_importance < initial_importance,
+            "Importance should decay over time: initial={}, final={}",
+            initial_importance,
+            final_importance
+        );
+
+        // But it should not decay below the minimum (50% of base importance for the severity)
+        let min_importance = ConsequenceSeverity::Moderate.base_importance() * 0.5;
+        assert!(
+            final_importance >= min_importance,
+            "Importance should not decay below minimum: final={}, min={}",
+            final_importance,
+            min_importance
+        );
+    }
+
+    #[test]
+    fn test_consequence_resolution_without_triggering() {
+        use crate::dm::story_memory::{ConsequenceSeverity, ConsequenceStatus};
+
+        let mut harness = TestHarness::new();
+
+        // Create a consequence
+        let consequence_id = harness.dm.story_memory_mut().create_consequence(
+            "Player owes money to the merchant",
+            "Merchant refuses to trade",
+            ConsequenceSeverity::Moderate,
+        );
+
+        assert_eq!(harness.dm.story_memory().pending_consequence_count(), 1);
+
+        // Resolve the consequence without triggering (e.g., player paid the debt)
+        assert!(
+            harness.dm.story_memory_mut().resolve_consequence(consequence_id),
+            "Should successfully resolve consequence"
+        );
+
+        assert_eq!(
+            harness.dm.story_memory().pending_consequence_count(),
+            0,
+            "Should have no pending consequences after resolution"
+        );
+
+        let resolved = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        assert_eq!(
+            resolved.status,
+            ConsequenceStatus::Resolved,
+            "Consequence should be in Resolved status"
+        );
+    }
 }

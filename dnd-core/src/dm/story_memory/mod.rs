@@ -14,14 +14,20 @@
 //! │  │ EntityIndex  │  │ FactStore    │  │ RelationshipGraph    │  │
 //! │  │ (name→id)    │  │ (id→facts)   │  │ (entity→entity)      │  │
 //! │  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+//! │                                                                 │
+//! │  ┌──────────────────────────────────────────────────────────┐  │
+//! │  │ ConsequenceStore (trigger → effect, with expiry)         │  │
+//! │  └──────────────────────────────────────────────────────────┘  │
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
 
+mod consequence;
 mod entity;
 mod fact;
 mod relationship;
 mod store;
 
+pub use consequence::{Consequence, ConsequenceId, ConsequenceSeverity, ConsequenceStatus};
 pub use entity::{Entity, EntityId, EntityType, StoryMoment};
 pub use fact::{FactCategory, FactId, FactSource, StoryFact};
 pub use relationship::{Relationship, RelationshipType};
