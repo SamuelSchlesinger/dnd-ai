@@ -18,6 +18,12 @@ pub enum DiceError {
     InvalidDieSize(u32),
     #[error("No dice specified")]
     NoDice,
+    #[error("Cannot keep {keep} dice when only rolling {count} (in {notation})")]
+    InvalidKeepCount {
+        keep: u32,
+        count: u32,
+        notation: String,
+    },
 }
 
 /// Advantage state for d20 rolls.
@@ -185,6 +191,17 @@ impl DiceExpression {
                 .map_err(|_| DiceError::InvalidNotation(s.to_string()))?;
 
             let die_type = DieType::from_sides(sides).ok_or(DiceError::InvalidDieSize(sides))?;
+
+            // Validate keep count doesn't exceed dice count
+            if let Some(keep) = keep_highest.or(keep_lowest) {
+                if keep > count {
+                    return Err(DiceError::InvalidKeepCount {
+                        keep,
+                        count,
+                        notation: s.to_string(),
+                    });
+                }
+            }
 
             components.push(DiceComponent {
                 count,
@@ -474,6 +491,25 @@ mod tests {
         let expr = DiceExpression::parse("4d6kh3").unwrap();
         assert_eq!(expr.components[0].count, 4);
         assert_eq!(expr.components[0].keep_highest, Some(3));
+    }
+
+    #[test]
+    fn test_invalid_keep_count() {
+        // Can't keep more dice than you roll
+        let result = DiceExpression::parse("4d6kh5");
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            DiceError::InvalidKeepCount { keep: 5, count: 4, .. }
+        ));
+
+        // Keep lowest also validates
+        let result = DiceExpression::parse("2d20kl3");
+        assert!(result.is_err());
+
+        // Equal is fine
+        let result = DiceExpression::parse("4d6kh4");
+        assert!(result.is_ok());
     }
 
     #[test]

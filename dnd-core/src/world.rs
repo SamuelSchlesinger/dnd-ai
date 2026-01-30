@@ -1672,12 +1672,13 @@ impl Character {
 
     pub fn proficiency_bonus(&self) -> i8 {
         match self.level {
+            0 => 2, // Invalid level, but default to minimum
             1..=4 => 2,
             5..=8 => 3,
             9..=12 => 4,
             13..=16 => 5,
-            17..=20 => 6,
-            _ => 2,
+            // Level 17+ caps at proficiency bonus 6 (D&D 5e max level is 20)
+            _ => 6,
         }
     }
 

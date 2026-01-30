@@ -1107,7 +1107,8 @@ impl RulesEngine {
             .map(|sc| caster.ability_scores.modifier(sc.ability))
             .unwrap_or(0);
         let spell_attack_bonus = spell_mod + caster.proficiency_bonus();
-        let spell_save_dc = 8 + spell_mod + caster.proficiency_bonus();
+        // Minimum DC of 8 as a sanity floor (though in practice, no valid build would go lower)
+        let spell_save_dc = (8 + spell_mod + caster.proficiency_bonus()).max(8);
 
         // Build the resolution
         let mut resolution = Resolution::new(String::new());
