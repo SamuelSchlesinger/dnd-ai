@@ -38,7 +38,7 @@ A D&D 5e game with an AI Dungeon Master powered by Claude. Create a character an
 
 ```bash
 # Clone and enter the repo
-git clone https://github.com/yourusername/dnd-ai.git
+git clone https://github.com/SamuelSchlesinger/dnd-ai.git
 cd dnd-ai
 
 # Set your API key (or create a .env file)
