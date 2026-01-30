@@ -106,6 +106,10 @@ See the AI Dungeon Master in action:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## How It Works
+
+Curious about the AI behind the DM screen? See **[How the AI Dungeon Master Works](docs/HOW_IT_WORKS.md)** for a peek at the prompt design, tool system, and story memory.
+
 ## Development
 
 ```bash
