@@ -990,8 +990,7 @@ fn render_review_step(
                     // Spawn async save task
                     let path_clone = path.clone();
                     std::thread::spawn(move || {
-                        let rt = tokio::runtime::Runtime::new().unwrap();
-                        rt.block_on(async {
+                        crate::runtime::RUNTIME.block_on(async {
                             let _ = saved.save_json(&path_clone).await;
                         });
                     });

@@ -47,7 +47,11 @@ impl Claude {
     /// Create a new Claude client with the given API key.
     pub fn new(api_key: impl Into<String>) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(30))
+                .build()
+                .expect("Failed to build HTTP client"),
             api_key: api_key.into(),
             model: DEFAULT_MODEL.to_string(),
         }

@@ -949,3 +949,131 @@ struct PartialToolUse {
     /// Accumulated JSON input buffer.
     json_buffer: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dm::story_memory::ConsequenceId;
+    use crate::world::{Character, CharacterClass, Location, LocationType};
+
+    fn create_test_world() -> GameWorld {
+        let mut character = Character::new("Test Hero");
+        character.classes.push(crate::world::ClassLevel {
+            class: CharacterClass::Fighter,
+            level: 1,
+            subclass: None,
+        });
+        let mut world = GameWorld::new("Test Campaign", character);
+        world.current_location = Location::new("Test Location", LocationType::Town)
+            .with_description("A test location");
+        world
+    }
+
+    #[test]
+    fn test_dm_config_default() {
+        let config = DmConfig::default();
+        assert!(config.model.is_none());
+        assert_eq!(config.max_tokens, 4096);
+        assert_eq!(config.temperature, Some(0.8));
+        assert!(config.custom_system_prompt.is_none());
+    }
+
+    #[test]
+    fn test_dm_response_creation() {
+        let response = DmResponse {
+            narrative: "You enter the dark cave.".to_string(),
+            intents: vec![],
+            effects: vec![],
+            resolutions: vec![],
+        };
+        assert_eq!(response.narrative, "You enter the dark cave.");
+        assert!(response.intents.is_empty());
+    }
+
+    #[test]
+    fn test_story_memory_access() {
+        let dm = DungeonMaster::new("test-key");
+        let memory = dm.story_memory();
+        assert_eq!(memory.current_turn(), 0);
+    }
+
+    #[test]
+    fn test_dm_memory_access() {
+        let dm = DungeonMaster::new("test-key");
+        let memory = dm.memory();
+        assert!(memory.get_messages().is_empty());
+    }
+
+    #[test]
+    fn test_with_config() {
+        let config = DmConfig {
+            model: Some("claude-sonnet-4-20250514".to_string()),
+            max_tokens: 2048,
+            temperature: Some(0.5),
+            custom_system_prompt: Some("Custom prompt".to_string()),
+        };
+
+        let _dm = DungeonMaster::new("test-key").with_config(config);
+    }
+
+    #[test]
+    fn test_build_system_prompt_contains_character_info() {
+        let dm = DungeonMaster::new("test-key");
+        let world = create_test_world();
+        let prompt = dm.build_system_prompt(&world, "I look around");
+
+        // The system prompt should contain character name
+        assert!(prompt.contains("Test Hero"));
+        // Should contain location
+        assert!(prompt.contains("Test Location"));
+    }
+
+    #[test]
+    fn test_relevance_result_triggers() {
+        let result = RelevanceResult {
+            triggered_consequences: vec![
+                ConsequenceId::new(),
+                ConsequenceId::new(),
+                ConsequenceId::new(),
+            ],
+            relevant_facts: vec![],
+            relevant_entities: vec![],
+            explanation: None,
+        };
+
+        let dm = DungeonMaster::new("test-key");
+        let context = dm.build_triggered_consequences_context(&result);
+
+        // Should include header when there are triggered consequences
+        assert!(context.contains("TRIGGERED CONSEQUENCES"));
+    }
+
+    #[test]
+    fn test_empty_relevance_result() {
+        let result = RelevanceResult {
+            triggered_consequences: vec![],
+            relevant_facts: vec![],
+            relevant_entities: vec![],
+            explanation: None,
+        };
+
+        let dm = DungeonMaster::new("test-key");
+        let context = dm.build_triggered_consequences_context(&result);
+
+        // Should be empty when no triggered consequences
+        assert!(context.is_empty());
+    }
+
+    #[test]
+    fn test_partial_tool_use_struct() {
+        let partial = PartialToolUse {
+            id: "tool_123".to_string(),
+            name: "roll_dice".to_string(),
+            json_buffer: r#"{"notation": "1d20"}"#.to_string(),
+        };
+
+        assert_eq!(partial.id, "tool_123");
+        assert_eq!(partial.name, "roll_dice");
+        assert!(partial.json_buffer.contains("1d20"));
+    }
+}

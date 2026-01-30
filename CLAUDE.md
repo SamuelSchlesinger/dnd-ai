@@ -45,25 +45,18 @@ cargo run -p claude --example tool_use
 
 # Run the D&D game (requires ANTHROPIC_API_KEY in .env)
 cargo run -p dnd
-
-# Run D&D in headless mode
-cargo run -p dnd -- --headless --name "Thorin" --class fighter --race dwarf
-
-# Run D&D with Bevy GUI
-cargo run -p dnd-bevy
 ```
 
 ## Workspace Structure
 
-This workspace contains 5 crates:
+This workspace contains 4 crates:
 
 | Crate | Path | Description |
 |-------|------|-------------|
 | `claude` | `claude/` | Minimal Anthropic Claude API client |
 | `dnd-macros` | `dnd-macros/` | Procedural macros for tool definitions |
 | `dnd-core` | `dnd-core/` | D&D 5e game engine with AI Dungeon Master |
-| `dnd` | `dnd/` | Terminal UI application for D&D |
-| `dnd-bevy` | `dnd-bevy/` | Bevy GUI application for D&D |
+| `dnd` | `dnd-bevy/` | Bevy GUI application for D&D |
 
 ## Claude API Client (`claude/src/`)
 
@@ -108,24 +101,6 @@ dm/
 ├── prompts/          # System prompt templates (.txt files)
 └── story_memory/     # Fact, entity, and relationship tracking
 ```
-
-## D&D TUI (`dnd/src/`)
-
-Vim-style terminal interface using ratatui:
-
-| Module | Purpose |
-|--------|---------|
-| `main.rs` | Application entry point |
-| `app.rs` | Application state, input modes |
-| `events.rs` | Event handling |
-| `character_creation.rs` | Character creation wizard |
-| `ui/` | Rendering, layout, widgets |
-
-### Input Modes
-
-- **NORMAL**: Navigation (`j`/`k`), mode switching (`i`, `:`), hotkeys (`?` help)
-- **INSERT**: Text input, `Esc` to return, `Enter` to send
-- **COMMAND**: `:q` quit, `:w` save, `:e <file>` load
 
 ## Adding a New Tool
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["claude", "dnd-macros", "dnd-core", "dnd", "dnd-bevy"]
+members = ["claude", "dnd-macros", "dnd-core", "dnd-bevy"]
 resolver = "2"
 
 [workspace.package]

@@ -773,8 +773,7 @@ pub fn spawn_worker(
 
     // Spawn the worker task
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(worker_loop(session, request_rx, response_tx));
+        crate::runtime::RUNTIME.block_on(worker_loop(session, request_rx, response_tx));
     });
 
     (request_tx, response_rx, initial_world)

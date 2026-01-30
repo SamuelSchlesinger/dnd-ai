@@ -19,12 +19,12 @@ cd dnd-ai
 export ANTHROPIC_API_KEY=your_key_here
 
 # Run the game
-cargo run -p dnd-bevy
+cargo run -p dnd
 ```
 
 **3. Create your character** and start playing!
 
-## Controls (Bevy GUI)
+## Controls
 
 | Action | How |
 |--------|-----|
@@ -33,25 +33,6 @@ cargo run -p dnd-bevy
 | Scroll history | Mouse wheel or drag |
 
 The AI Dungeon Master will narrate your adventure, describe scenes, run combat, and respond to whatever you try. Just type what your character does!
-
-## Alternative: Terminal UI
-
-Prefer a terminal experience? The TUI has vim-style controls:
-
-```bash
-cargo run -p dnd
-```
-
-| Mode | Key | Action |
-|------|-----|--------|
-| Normal | `i` | Enter insert mode to type |
-| Normal | `j`/`k` | Scroll narrative |
-| Normal | `?` | Toggle help |
-| Insert | `Enter` | Send message |
-| Insert | `Esc` | Back to normal mode |
-| Command | `:w` | Save game |
-| Command | `:e <file>` | Load game |
-| Command | `:q` | Quit |
 
 ## Features
 
@@ -71,8 +52,8 @@ cargo run -p dnd
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              dnd / dnd-bevy (applications)                  │
-│  Terminal UI (ratatui)  │  GUI (Bevy + egui)                │
+│                     dnd (application)                       │
+│                    GUI (Bevy + egui)                        │
 └─────────────────────────────┬───────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────┐

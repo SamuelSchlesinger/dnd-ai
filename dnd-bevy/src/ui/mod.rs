@@ -44,8 +44,7 @@ pub fn main_ui_system(
                             list.loading = true;
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                let result = rt.block_on(dnd_core::persist::list_character_saves("saves/characters"));
+                                let result = crate::runtime::RUNTIME.block_on(dnd_core::persist::list_character_saves("saves/characters"));
                                 let _ = tx.send(result);
                             });
 
@@ -70,8 +69,7 @@ pub fn main_ui_system(
                             list.loading = true;
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                let result = rt.block_on(list_game_saves("saves"));
+                                let result = crate::runtime::RUNTIME.block_on(list_game_saves("saves"));
                                 let _ = tx.send(result);
                             });
 
@@ -83,8 +81,7 @@ pub fn main_ui_system(
                             app_state.set_status_persistent("Loading game...");
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                let result = rt.block_on(async {
+                                let result = crate::runtime::RUNTIME.block_on(async {
                                     dnd_core::GameSession::load(&path).await.map_err(|e| e.to_string())
                                 });
                                 let _ = tx.send(result);

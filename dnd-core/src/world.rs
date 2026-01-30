@@ -739,6 +739,10 @@ pub struct ClassResources {
     /// Remaining HP in Wild Shape form
     pub wild_shape_hp: Option<i32>,
 
+    // Cleric/Paladin
+    /// Whether Channel Divinity has been used this short rest
+    pub channel_divinity_used: bool,
+
     // Paladin
     /// Current Lay on Hands pool (max = 5 × Paladin level)
     pub lay_on_hands_pool: u32,
@@ -783,10 +787,16 @@ impl ClassResources {
                     self.max_ki_points = level;
                 }
             }
+            CharacterClass::Cleric => {
+                // Channel Divinity starts fresh
+                self.channel_divinity_used = false;
+            }
             CharacterClass::Paladin => {
                 // Lay on Hands pool = 5 × Paladin level
                 self.lay_on_hands_pool = 5 * level as u32;
                 self.lay_on_hands_max = 5 * level as u32;
+                // Channel Divinity starts fresh
+                self.channel_divinity_used = false;
             }
             CharacterClass::Sorcerer => {
                 // Sorcery points equal Sorcerer level (starting at level 2)
@@ -812,6 +822,10 @@ impl ClassResources {
             CharacterClass::Fighter => {
                 self.action_surge_used = false;
                 self.second_wind_used = false;
+            }
+            CharacterClass::Cleric | CharacterClass::Paladin => {
+                // Channel Divinity recovers on short rest
+                self.channel_divinity_used = false;
             }
             CharacterClass::Monk => {
                 // Ki points don't recover on short rest in base rules

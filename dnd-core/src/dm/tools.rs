@@ -1548,3 +1548,302 @@ fn parse_condition(s: &str) -> Option<Condition> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::world::{Character, CharacterClass, ClassLevel, GameWorld};
+
+    fn create_test_world() -> GameWorld {
+        let mut character = Character::new("Test Hero");
+        character.classes.push(ClassLevel {
+            class: CharacterClass::Fighter,
+            level: 1,
+            subclass: None,
+        });
+        GameWorld::new("Test Campaign", character)
+    }
+
+    #[test]
+    fn test_all_tools_have_valid_schemas() {
+        let tools = DmTools::all();
+        assert!(!tools.is_empty(), "Should have at least one tool");
+
+        for tool in &tools {
+            assert!(!tool.name.is_empty(), "Tool name should not be empty");
+            assert!(
+                !tool.description.is_empty(),
+                "Tool {} should have a description",
+                tool.name
+            );
+            assert!(
+                tool.input_schema.get("type").is_some(),
+                "Tool {} should have a type in schema",
+                tool.name
+            );
+        }
+    }
+
+    #[test]
+    fn test_tool_count() {
+        let tools = DmTools::all();
+        // Count all tools - should match the number in DmTools::all()
+        assert!(tools.len() >= 30, "Should have at least 30 tools, got {}", tools.len());
+    }
+
+    #[test]
+    fn test_roll_dice_tool_schema() {
+        let tools = DmTools::all();
+        let roll_dice = tools.iter().find(|t| t.name == "roll_dice").unwrap();
+
+        let props = roll_dice.input_schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("notation"), "roll_dice should have 'notation' property");
+        assert!(props.contains_key("purpose"), "roll_dice should have 'purpose' property");
+
+        let required = roll_dice.input_schema["required"].as_array().unwrap();
+        assert!(
+            required.iter().any(|v| v.as_str() == Some("notation")),
+            "roll_dice should require 'notation'"
+        );
+    }
+
+    #[test]
+    fn test_skill_check_tool_schema() {
+        let tools = DmTools::all();
+        let skill_check = tools.iter().find(|t| t.name == "skill_check").unwrap();
+
+        let props = skill_check.input_schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("skill"), "skill_check should have 'skill' property");
+        assert!(props.contains_key("dc"), "skill_check should have 'dc' property");
+    }
+
+    #[test]
+    fn test_apply_damage_tool_schema() {
+        let tools = DmTools::all();
+        let apply_damage = tools.iter().find(|t| t.name == "apply_damage").unwrap();
+
+        let props = apply_damage.input_schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("amount"), "apply_damage should have 'amount' property");
+        assert!(props.contains_key("damage_type"), "apply_damage should have 'damage_type' property");
+    }
+
+    #[test]
+    fn test_parse_tool_call_roll_dice() {
+        let world = create_test_world();
+        let input = json!({
+            "notation": "2d6+3",
+            "purpose": "attack damage"
+        });
+
+        let intent = parse_tool_call("roll_dice", &input, &world);
+        assert!(intent.is_some());
+
+        if let Some(Intent::RollDice { notation, purpose }) = intent {
+            assert_eq!(notation, "2d6+3");
+            assert_eq!(purpose, "attack damage");
+        } else {
+            panic!("Expected RollDice intent");
+        }
+    }
+
+    #[test]
+    fn test_parse_tool_call_skill_check() {
+        let world = create_test_world();
+        let input = json!({
+            "skill": "athletics",
+            "dc": 15,
+            "description": "climbing the wall"
+        });
+
+        let intent = parse_tool_call("skill_check", &input, &world);
+        assert!(intent.is_some());
+
+        if let Some(Intent::SkillCheck { skill, dc, description, .. }) = intent {
+            assert_eq!(skill, Skill::Athletics);
+            assert_eq!(dc, 15);
+            assert_eq!(description, "climbing the wall");
+        } else {
+            panic!("Expected SkillCheck intent");
+        }
+    }
+
+    #[test]
+    fn test_parse_tool_call_apply_damage() {
+        let world = create_test_world();
+        let input = json!({
+            "amount": 10,
+            "damage_type": "slashing",
+            "source": "sword"
+        });
+
+        let intent = parse_tool_call("apply_damage", &input, &world);
+        assert!(intent.is_some());
+
+        if let Some(Intent::Damage { amount, damage_type, source, .. }) = intent {
+            assert_eq!(amount, 10);
+            assert_eq!(damage_type, DamageType::Slashing);
+            assert_eq!(source, "sword");
+        } else {
+            panic!("Expected Damage intent");
+        }
+    }
+
+    #[test]
+    fn test_parse_tool_call_invalid_damage_amount() {
+        let world = create_test_world();
+        let input = json!({
+            "amount": 0,
+            "damage_type": "slashing",
+            "source": "sword"
+        });
+
+        let intent = parse_tool_call("apply_damage", &input, &world);
+        assert!(intent.is_none(), "Should reject zero damage");
+
+        let input = json!({
+            "amount": -5,
+            "damage_type": "slashing",
+            "source": "sword"
+        });
+
+        let intent = parse_tool_call("apply_damage", &input, &world);
+        assert!(intent.is_none(), "Should reject negative damage");
+    }
+
+    #[test]
+    fn test_parse_tool_call_apply_healing() {
+        let world = create_test_world();
+        let input = json!({
+            "amount": 8,
+            "source": "potion"
+        });
+
+        let intent = parse_tool_call("apply_healing", &input, &world);
+        assert!(intent.is_some());
+
+        if let Some(Intent::Heal { amount, source, .. }) = intent {
+            assert_eq!(amount, 8);
+            assert_eq!(source, "potion");
+        } else {
+            panic!("Expected Heal intent");
+        }
+    }
+
+    #[test]
+    fn test_parse_tool_call_invalid_healing_amount() {
+        let world = create_test_world();
+        let input = json!({
+            "amount": 0,
+            "source": "potion"
+        });
+
+        let intent = parse_tool_call("apply_healing", &input, &world);
+        assert!(intent.is_none(), "Should reject zero healing");
+    }
+
+    #[test]
+    fn test_parse_tool_call_apply_condition() {
+        let world = create_test_world();
+        let input = json!({
+            "condition": "poisoned",
+            "source": "trap",
+            "duration_rounds": 3
+        });
+
+        let intent = parse_tool_call("apply_condition", &input, &world);
+        assert!(intent.is_some());
+
+        if let Some(Intent::ApplyCondition { condition, source, .. }) = intent {
+            assert_eq!(condition, Condition::Poisoned);
+            assert_eq!(source, "trap");
+        } else {
+            panic!("Expected ApplyCondition intent");
+        }
+    }
+
+    #[test]
+    fn test_parse_tool_call_unknown_tool() {
+        let world = create_test_world();
+        let input = json!({});
+
+        let intent = parse_tool_call("unknown_tool", &input, &world);
+        assert!(intent.is_none());
+    }
+
+    #[test]
+    fn test_parse_ability() {
+        assert_eq!(parse_ability("strength"), Some(Ability::Strength));
+        assert_eq!(parse_ability("str"), Some(Ability::Strength));
+        assert_eq!(parse_ability("STR"), Some(Ability::Strength));
+        assert_eq!(parse_ability("dexterity"), Some(Ability::Dexterity));
+        assert_eq!(parse_ability("dex"), Some(Ability::Dexterity));
+        assert_eq!(parse_ability("constitution"), Some(Ability::Constitution));
+        assert_eq!(parse_ability("con"), Some(Ability::Constitution));
+        assert_eq!(parse_ability("intelligence"), Some(Ability::Intelligence));
+        assert_eq!(parse_ability("int"), Some(Ability::Intelligence));
+        assert_eq!(parse_ability("wisdom"), Some(Ability::Wisdom));
+        assert_eq!(parse_ability("wis"), Some(Ability::Wisdom));
+        assert_eq!(parse_ability("charisma"), Some(Ability::Charisma));
+        assert_eq!(parse_ability("cha"), Some(Ability::Charisma));
+        assert_eq!(parse_ability("invalid"), None);
+    }
+
+    #[test]
+    fn test_parse_skill() {
+        assert_eq!(parse_skill("athletics"), Some(Skill::Athletics));
+        assert_eq!(parse_skill("stealth"), Some(Skill::Stealth));
+        assert_eq!(parse_skill("perception"), Some(Skill::Perception));
+        assert_eq!(parse_skill("persuasion"), Some(Skill::Persuasion));
+        assert_eq!(parse_skill("invalid"), None);
+    }
+
+    #[test]
+    fn test_parse_advantage() {
+        assert_eq!(parse_advantage(Some("advantage")), Advantage::Advantage);
+        assert_eq!(parse_advantage(Some("disadvantage")), Advantage::Disadvantage);
+        assert_eq!(parse_advantage(Some("normal")), Advantage::Normal);
+        assert_eq!(parse_advantage(None), Advantage::Normal);
+    }
+
+    #[test]
+    fn test_parse_damage_type() {
+        assert_eq!(parse_damage_type("slashing"), Some(DamageType::Slashing));
+        assert_eq!(parse_damage_type("SLASHING"), Some(DamageType::Slashing));
+        assert_eq!(parse_damage_type("piercing"), Some(DamageType::Piercing));
+        assert_eq!(parse_damage_type("bludgeoning"), Some(DamageType::Bludgeoning));
+        assert_eq!(parse_damage_type("fire"), Some(DamageType::Fire));
+        assert_eq!(parse_damage_type("cold"), Some(DamageType::Cold));
+        assert_eq!(parse_damage_type("lightning"), Some(DamageType::Lightning));
+        assert_eq!(parse_damage_type("psychic"), Some(DamageType::Psychic));
+        assert_eq!(parse_damage_type("invalid"), None);
+    }
+
+    #[test]
+    fn test_parse_condition() {
+        assert_eq!(parse_condition("blinded"), Some(Condition::Blinded));
+        assert_eq!(parse_condition("BLINDED"), Some(Condition::Blinded));
+        assert_eq!(parse_condition("charmed"), Some(Condition::Charmed));
+        assert_eq!(parse_condition("frightened"), Some(Condition::Frightened));
+        assert_eq!(parse_condition("grappled"), Some(Condition::Grappled));
+        assert_eq!(parse_condition("incapacitated"), Some(Condition::Incapacitated));
+        assert_eq!(parse_condition("invisible"), Some(Condition::Invisible));
+        assert_eq!(parse_condition("paralyzed"), Some(Condition::Paralyzed));
+        assert_eq!(parse_condition("poisoned"), Some(Condition::Poisoned));
+        assert_eq!(parse_condition("prone"), Some(Condition::Prone));
+        assert_eq!(parse_condition("stunned"), Some(Condition::Stunned));
+        assert_eq!(parse_condition("unconscious"), Some(Condition::Unconscious));
+        assert_eq!(parse_condition("invalid"), None);
+    }
+
+    #[test]
+    fn test_info_tool_show_inventory() {
+        let world = create_test_world();
+        let input = json!({});
+
+        let result = execute_info_tool("show_inventory", &input, &world);
+        assert!(result.is_some());
+
+        let inventory = result.unwrap();
+        assert!(inventory.contains("Gold"));
+    }
+}

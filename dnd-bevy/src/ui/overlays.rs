@@ -768,9 +768,8 @@ pub fn render_load_character(
                     if ui.add_enabled(can_load, egui::Button::new("Load & Play")).clicked() {
                         if let Some(idx) = save_list.selected {
                             let path = save_list.saves[idx].path.clone();
-                            // Load the character synchronously for simplicity
-                            let rt = tokio::runtime::Runtime::new().unwrap();
-                            match rt.block_on(dnd_core::SavedCharacter::load_json(&path)) {
+                            // Load the character using the shared runtime
+                            match crate::runtime::RUNTIME.block_on(dnd_core::SavedCharacter::load_json(&path)) {
                                 Ok(saved) => {
                                     selected_character = Some(saved.character);
                                     app_state.overlay = ActiveOverlay::None;

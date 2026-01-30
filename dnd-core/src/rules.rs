@@ -9,9 +9,38 @@
 //! This separation ensures deterministic, testable game mechanics
 //! independent of AI decision-making.
 
-use crate::dice::{self, Advantage, DiceExpression, RollResult};
+use crate::dice::{self, Advantage, ComponentResult, DiceExpression, DieType, RollResult};
 use crate::world::{Ability, CharacterId, Combatant, Condition, GameWorld, Item, ItemType, Skill};
 use serde::{Deserialize, Serialize};
+
+/// Roll dice with a fallback expression. If both fail, returns a minimal result.
+///
+/// This avoids nested unwraps which could panic in edge cases.
+fn roll_with_fallback(notation: &str, fallback: &str) -> RollResult {
+    dice::roll(notation)
+        .or_else(|_| dice::roll(fallback))
+        .unwrap_or_else(|_| {
+            // Create a minimal fallback result (1d4 = 1)
+            let expr = DiceExpression {
+                components: vec![],
+                modifier: 1,
+                original: fallback.to_string(),
+            };
+            RollResult {
+                expression: expr,
+                component_results: vec![ComponentResult {
+                    die_type: DieType::D4,
+                    rolls: vec![1],
+                    kept: vec![1],
+                    subtotal: 1,
+                }],
+                modifier: 0,
+                total: 1,
+                natural_20: false,
+                natural_1: false,
+            }
+        })
+}
 
 /// An intent represents what a character wants to do.
 /// The AI generates intents, the RulesEngine resolves them.
@@ -995,7 +1024,7 @@ impl RulesEngine {
             } else {
                 format!("{damage_dice}+{total_mod}")
             };
-            let damage_roll = dice::roll(&damage_expr).unwrap_or_else(|_| dice::roll("1d4").unwrap());
+            let damage_roll = roll_with_fallback(&damage_expr, "1d4");
             resolution = resolution.with_effect(Effect::DiceRolled {
                 roll: damage_roll.clone(),
                 purpose: "Damage".to_string(),
@@ -1111,8 +1140,7 @@ impl RulesEngine {
             };
 
             // Roll spell attack
-            let attack_roll = dice::roll(&format!("1d20+{}", spell_attack_bonus))
-                .unwrap_or_else(|_| dice::roll("1d20").unwrap());
+            let attack_roll = roll_with_fallback(&format!("1d20+{}", spell_attack_bonus), "1d20");
 
             resolution = resolution.with_effect(Effect::DiceRolled {
                 roll: attack_roll.clone(),
@@ -2143,7 +2171,7 @@ impl RulesEngine {
                     } else {
                         dice_expr
                     };
-                    let heal_roll = dice::roll(&heal_expr).unwrap_or_else(|_| dice::roll("1d4").unwrap());
+                    let heal_roll = roll_with_fallback(&heal_expr, "1d4");
 
                     Resolution::new(format!(
                         "{} drinks {} and heals for {} HP",
@@ -2676,8 +2704,7 @@ impl RulesEngine {
             base_dice.min(5)
         };
 
-        let damage_roll = dice::roll(&format!("{total_dice}d8"))
-            .unwrap_or_else(|_| dice::roll("2d8").unwrap());
+        let damage_roll = roll_with_fallback(&format!("{total_dice}d8"), "2d8");
 
         let extra_text = if target_is_undead_or_fiend {
             " (extra damage vs undead/fiend)"
@@ -2964,8 +2991,7 @@ impl RulesEngine {
             .map(|c| c.level)
             .unwrap_or(1);
 
-        let healing_roll = dice::roll(&format!("1d10+{fighter_level}"))
-            .unwrap_or_else(|_| dice::roll("1d10+1").unwrap());
+        let healing_roll = roll_with_fallback(&format!("1d10+{fighter_level}"), "1d10+1");
         let healing = healing_roll.total;
 
         let new_hp = (character.hit_points.current + healing).min(character.hit_points.maximum);

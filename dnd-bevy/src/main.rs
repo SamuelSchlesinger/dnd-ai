@@ -11,6 +11,7 @@
 mod animations;
 mod character_creation;
 mod effects;
+mod runtime;
 mod state;
 mod ui;
 
@@ -113,14 +114,13 @@ fn handle_ready_to_start(
 
     // Spawn async session creation
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
+        let result = crate::runtime::RUNTIME.block_on(async {
             let config = SessionConfig::new(&campaign_name)
                 .with_character_name(&character.name);
 
-            let result = GameSession::new_with_character(config, character).await;
-            let _ = tx.send(result.map_err(|e| e.to_string()));
+            GameSession::new_with_character(config, character).await.map_err(|e| e.to_string())
         });
+        let _ = tx.send(result);
     });
 
     // Store the pending session receiver
