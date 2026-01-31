@@ -436,7 +436,9 @@ pub struct CharacterSaveInfo {
 }
 
 /// List all character save files in a directory.
-pub async fn list_character_saves(dir: impl AsRef<Path>) -> Result<Vec<CharacterSaveInfo>, PersistError> {
+pub async fn list_character_saves(
+    dir: impl AsRef<Path>,
+) -> Result<Vec<CharacterSaveInfo>, PersistError> {
     let mut saves = Vec::new();
 
     // Create the directory if it doesn't exist
@@ -579,13 +581,18 @@ mod tests {
         character.backstory = Some("Testing save functionality.".to_string());
 
         let saved = SavedCharacter::new(character);
-        saved.save_json(&save_path).await.expect("Save should succeed");
+        saved
+            .save_json(&save_path)
+            .await
+            .expect("Save should succeed");
 
         // Verify file exists
         assert!(save_path.exists());
 
         // Load the character
-        let loaded = SavedCharacter::load_json(&save_path).await.expect("Load should succeed");
+        let loaded = SavedCharacter::load_json(&save_path)
+            .await
+            .expect("Load should succeed");
 
         assert_eq!(loaded.character.name, "Save Test Hero");
         assert_eq!(loaded.metadata.name, "Save Test Hero");
@@ -605,7 +612,10 @@ mod tests {
 
         let character = create_sample_fighter("Peek Test");
         let saved = SavedCharacter::new(character);
-        saved.save_json(&save_path).await.expect("Save should succeed");
+        saved
+            .save_json(&save_path)
+            .await
+            .expect("Save should succeed");
 
         // Peek at metadata without loading full character
         let metadata = SavedCharacter::peek_metadata(&save_path)

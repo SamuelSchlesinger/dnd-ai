@@ -901,7 +901,9 @@ impl DmTools {
     fn equip_item() -> Tool {
         Tool {
             name: "equip_item".to_string(),
-            description: "Equip a weapon, armor, or shield from inventory. Affects AC and attack damage.".to_string(),
+            description:
+                "Equip a weapon, armor, or shield from inventory. Affects AC and attack damage."
+                    .to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -1184,7 +1186,10 @@ pub fn parse_tool_call(name: &str, input: &Value, world: &GameWorld) -> Option<I
             let item_name = input["item_name"].as_str()?.to_string();
             let quantity = input["quantity"].as_u64().unwrap_or(1) as u32;
 
-            Some(Intent::RemoveItem { item_name, quantity })
+            Some(Intent::RemoveItem {
+                item_name,
+                quantity,
+            })
         }
         "use_item" => {
             let item_name = input["item_name"].as_str()?.to_string();
@@ -1429,7 +1434,10 @@ fn format_inventory(world: &GameWorld) -> String {
         };
         output.push_str(&format!(
             "  Main Hand: {} ({} {}){}\n",
-            weapon.base.name, weapon.damage_dice, weapon.damage_type.name(), two_handed
+            weapon.base.name,
+            weapon.damage_dice,
+            weapon.damage_type.name(),
+            two_handed
         ));
     } else {
         output.push_str("  Main Hand: Empty\n");
@@ -1588,7 +1596,11 @@ mod tests {
     fn test_tool_count() {
         let tools = DmTools::all();
         // Count all tools - should match the number in DmTools::all()
-        assert!(tools.len() >= 30, "Should have at least 30 tools, got {}", tools.len());
+        assert!(
+            tools.len() >= 30,
+            "Should have at least 30 tools, got {}",
+            tools.len()
+        );
     }
 
     #[test]
@@ -1597,8 +1609,14 @@ mod tests {
         let roll_dice = tools.iter().find(|t| t.name == "roll_dice").unwrap();
 
         let props = roll_dice.input_schema["properties"].as_object().unwrap();
-        assert!(props.contains_key("notation"), "roll_dice should have 'notation' property");
-        assert!(props.contains_key("purpose"), "roll_dice should have 'purpose' property");
+        assert!(
+            props.contains_key("notation"),
+            "roll_dice should have 'notation' property"
+        );
+        assert!(
+            props.contains_key("purpose"),
+            "roll_dice should have 'purpose' property"
+        );
 
         let required = roll_dice.input_schema["required"].as_array().unwrap();
         assert!(
@@ -1613,8 +1631,14 @@ mod tests {
         let skill_check = tools.iter().find(|t| t.name == "skill_check").unwrap();
 
         let props = skill_check.input_schema["properties"].as_object().unwrap();
-        assert!(props.contains_key("skill"), "skill_check should have 'skill' property");
-        assert!(props.contains_key("dc"), "skill_check should have 'dc' property");
+        assert!(
+            props.contains_key("skill"),
+            "skill_check should have 'skill' property"
+        );
+        assert!(
+            props.contains_key("dc"),
+            "skill_check should have 'dc' property"
+        );
     }
 
     #[test]
@@ -1623,8 +1647,14 @@ mod tests {
         let apply_damage = tools.iter().find(|t| t.name == "apply_damage").unwrap();
 
         let props = apply_damage.input_schema["properties"].as_object().unwrap();
-        assert!(props.contains_key("amount"), "apply_damage should have 'amount' property");
-        assert!(props.contains_key("damage_type"), "apply_damage should have 'damage_type' property");
+        assert!(
+            props.contains_key("amount"),
+            "apply_damage should have 'amount' property"
+        );
+        assert!(
+            props.contains_key("damage_type"),
+            "apply_damage should have 'damage_type' property"
+        );
     }
 
     #[test]
@@ -1658,7 +1688,13 @@ mod tests {
         let intent = parse_tool_call("skill_check", &input, &world);
         assert!(intent.is_some());
 
-        if let Some(Intent::SkillCheck { skill, dc, description, .. }) = intent {
+        if let Some(Intent::SkillCheck {
+            skill,
+            dc,
+            description,
+            ..
+        }) = intent
+        {
             assert_eq!(skill, Skill::Athletics);
             assert_eq!(dc, 15);
             assert_eq!(description, "climbing the wall");
@@ -1679,7 +1715,13 @@ mod tests {
         let intent = parse_tool_call("apply_damage", &input, &world);
         assert!(intent.is_some());
 
-        if let Some(Intent::Damage { amount, damage_type, source, .. }) = intent {
+        if let Some(Intent::Damage {
+            amount,
+            damage_type,
+            source,
+            ..
+        }) = intent
+        {
             assert_eq!(amount, 10);
             assert_eq!(damage_type, DamageType::Slashing);
             assert_eq!(source, "sword");
@@ -1753,7 +1795,10 @@ mod tests {
         let intent = parse_tool_call("apply_condition", &input, &world);
         assert!(intent.is_some());
 
-        if let Some(Intent::ApplyCondition { condition, source, .. }) = intent {
+        if let Some(Intent::ApplyCondition {
+            condition, source, ..
+        }) = intent
+        {
             assert_eq!(condition, Condition::Poisoned);
             assert_eq!(source, "trap");
         } else {
@@ -1800,7 +1845,10 @@ mod tests {
     #[test]
     fn test_parse_advantage() {
         assert_eq!(parse_advantage(Some("advantage")), Advantage::Advantage);
-        assert_eq!(parse_advantage(Some("disadvantage")), Advantage::Disadvantage);
+        assert_eq!(
+            parse_advantage(Some("disadvantage")),
+            Advantage::Disadvantage
+        );
         assert_eq!(parse_advantage(Some("normal")), Advantage::Normal);
         assert_eq!(parse_advantage(None), Advantage::Normal);
     }
@@ -1810,7 +1858,10 @@ mod tests {
         assert_eq!(parse_damage_type("slashing"), Some(DamageType::Slashing));
         assert_eq!(parse_damage_type("SLASHING"), Some(DamageType::Slashing));
         assert_eq!(parse_damage_type("piercing"), Some(DamageType::Piercing));
-        assert_eq!(parse_damage_type("bludgeoning"), Some(DamageType::Bludgeoning));
+        assert_eq!(
+            parse_damage_type("bludgeoning"),
+            Some(DamageType::Bludgeoning)
+        );
         assert_eq!(parse_damage_type("fire"), Some(DamageType::Fire));
         assert_eq!(parse_damage_type("cold"), Some(DamageType::Cold));
         assert_eq!(parse_damage_type("lightning"), Some(DamageType::Lightning));
@@ -1825,7 +1876,10 @@ mod tests {
         assert_eq!(parse_condition("charmed"), Some(Condition::Charmed));
         assert_eq!(parse_condition("frightened"), Some(Condition::Frightened));
         assert_eq!(parse_condition("grappled"), Some(Condition::Grappled));
-        assert_eq!(parse_condition("incapacitated"), Some(Condition::Incapacitated));
+        assert_eq!(
+            parse_condition("incapacitated"),
+            Some(Condition::Incapacitated)
+        );
         assert_eq!(parse_condition("invisible"), Some(Condition::Invisible));
         assert_eq!(parse_condition("paralyzed"), Some(Condition::Paralyzed));
         assert_eq!(parse_condition("poisoned"), Some(Condition::Poisoned));

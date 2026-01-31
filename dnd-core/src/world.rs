@@ -668,7 +668,7 @@ impl CharacterClass {
             CharacterClass::Sorcerer => 2,
             CharacterClass::Warlock => 2,
             CharacterClass::Wizard => 6, // Spellbook spells
-            _ => 0, // Clerics and Druids prepare from entire list
+            _ => 0,                      // Clerics and Druids prepare from entire list
         }
     }
 }
@@ -983,7 +983,11 @@ impl Item {
         match self.item_type {
             ItemType::Weapon | ItemType::Armor | ItemType::Shield => false,
             ItemType::Wand | ItemType::Ring | ItemType::Wondrous => false, // Unique items
-            ItemType::Potion | ItemType::Scroll | ItemType::Adventuring | ItemType::Tool | ItemType::Other => true,
+            ItemType::Potion
+            | ItemType::Scroll
+            | ItemType::Adventuring
+            | ItemType::Tool
+            | ItemType::Other => true,
         }
     }
 }
@@ -1095,7 +1099,11 @@ pub struct WeaponItem {
 }
 
 impl WeaponItem {
-    pub fn new(name: impl Into<String>, damage_dice: impl Into<String>, damage_type: WeaponDamageType) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        damage_dice: impl Into<String>,
+        damage_type: WeaponDamageType,
+    ) -> Self {
         Self {
             base: Item {
                 name: name.into(),
@@ -1202,13 +1210,19 @@ pub enum ConsumableEffect {
     /// Remove a condition
     RemoveCondition { condition: Condition },
     /// Grant a condition for a duration
-    GrantCondition { condition: Condition, duration_rounds: u32 },
+    GrantCondition {
+        condition: Condition,
+        duration_rounds: u32,
+    },
     /// Cast a spell from a scroll
     CastSpell { spell_name: String, level: u8 },
     /// Grant temporary hit points
     TemporaryHitPoints { amount: i32 },
     /// Grant advantage on a type of roll for duration
-    GrantAdvantage { roll_type: String, duration_rounds: u32 },
+    GrantAdvantage {
+        roll_type: String,
+        duration_rounds: u32,
+    },
 }
 
 /// A consumable item with its effect.
@@ -1219,18 +1233,28 @@ pub struct ConsumableItem {
 }
 
 impl ConsumableItem {
-    pub fn healing_potion(name: impl Into<String>, dice: impl Into<String>, bonus: i32, value_gp: f32) -> Self {
+    pub fn healing_potion(
+        name: impl Into<String>,
+        dice: impl Into<String>,
+        bonus: i32,
+        value_gp: f32,
+    ) -> Self {
         Self {
             base: Item {
                 name: name.into(),
                 quantity: 1,
                 weight: 0.5,
                 value_gp,
-                description: Some("A magical potion that restores health when consumed.".to_string()),
+                description: Some(
+                    "A magical potion that restores health when consumed.".to_string(),
+                ),
                 item_type: ItemType::Potion,
                 magical: true,
             },
-            effect: ConsumableEffect::Healing { dice: dice.into(), bonus },
+            effect: ConsumableEffect::Healing {
+                dice: dice.into(),
+                bonus,
+            },
         }
     }
 
@@ -1281,7 +1305,11 @@ impl Inventory {
     /// Name matching is case-insensitive.
     pub fn remove_item(&mut self, name: &str, quantity: u32) -> bool {
         let name_lower = name.to_lowercase();
-        if let Some(idx) = self.items.iter().position(|i| i.name.to_lowercase() == name_lower) {
+        if let Some(idx) = self
+            .items
+            .iter()
+            .position(|i| i.name.to_lowercase() == name_lower)
+        {
             if self.items[idx].quantity >= quantity {
                 self.items[idx].quantity -= quantity;
                 if self.items[idx].quantity == 0 {
@@ -1295,12 +1323,16 @@ impl Inventory {
 
     /// Find an item by name.
     pub fn find_item(&self, name: &str) -> Option<&Item> {
-        self.items.iter().find(|i| i.name.to_lowercase() == name.to_lowercase())
+        self.items
+            .iter()
+            .find(|i| i.name.to_lowercase() == name.to_lowercase())
     }
 
     /// Find an item by name (mutable).
     pub fn find_item_mut(&mut self, name: &str) -> Option<&mut Item> {
-        self.items.iter_mut().find(|i| i.name.to_lowercase() == name.to_lowercase())
+        self.items
+            .iter_mut()
+            .find(|i| i.name.to_lowercase() == name.to_lowercase())
     }
 
     /// Check if the inventory contains an item.
@@ -1733,7 +1765,11 @@ impl Character {
         };
 
         // Add shield bonus if equipped
-        let shield_bonus: i8 = if self.equipment.shield.is_some() { 2 } else { 0 };
+        let shield_bonus: i8 = if self.equipment.shield.is_some() {
+            2
+        } else {
+            0
+        };
 
         (base_ac + shield_bonus).max(1) as u8
     }
@@ -2350,12 +2386,12 @@ mod tests {
 
         // Test odd scores below 10 (edge case for floor division)
         let odd_scores = AbilityScores::new(9, 7, 5, 11, 13, 15);
-        assert_eq!(odd_scores.modifier(Ability::Strength), -1);  // 9 -> -1
+        assert_eq!(odd_scores.modifier(Ability::Strength), -1); // 9 -> -1
         assert_eq!(odd_scores.modifier(Ability::Dexterity), -2); // 7 -> -2
         assert_eq!(odd_scores.modifier(Ability::Constitution), -3); // 5 -> -3
-        assert_eq!(odd_scores.modifier(Ability::Intelligence), 0);  // 11 -> 0
-        assert_eq!(odd_scores.modifier(Ability::Wisdom), 1);     // 13 -> +1
-        assert_eq!(odd_scores.modifier(Ability::Charisma), 2);   // 15 -> +2
+        assert_eq!(odd_scores.modifier(Ability::Intelligence), 0); // 11 -> 0
+        assert_eq!(odd_scores.modifier(Ability::Wisdom), 1); // 13 -> +1
+        assert_eq!(odd_scores.modifier(Ability::Charisma), 2); // 15 -> +2
     }
 
     #[test]

@@ -29,13 +29,20 @@ async fn test_combat_initiation() {
     }
 
     let config = HeadlessConfig::quick_start("Combat Tester");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Verify we start NOT in combat
     assert!(!game.in_combat(), "Should not be in combat initially");
     let initial_hp = game.current_hp();
     let max_hp = game.max_hp();
-    println!("Initial state: HP {}/{}, in_combat={}", initial_hp, max_hp, game.in_combat());
+    println!(
+        "Initial state: HP {}/{}, in_combat={}",
+        initial_hp,
+        max_hp,
+        game.in_combat()
+    );
 
     // Try to initiate combat by attacking
     let response = game
@@ -76,7 +83,9 @@ async fn test_combat_state_tracking() {
     }
 
     let config = HeadlessConfig::quick_start("State Tracker");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // First, establish there's an enemy
     let response1 = game
@@ -108,8 +117,10 @@ async fn test_combat_state_tracking() {
 
     // BUG CHECK: Response and game state should match
     if in_combat_response != in_combat_game {
-        println!("BUG FOUND: Response in_combat ({}) doesn't match game.in_combat() ({})",
-            in_combat_response, in_combat_game);
+        println!(
+            "BUG FOUND: Response in_combat ({}) doesn't match game.in_combat() ({})",
+            in_combat_response, in_combat_game
+        );
     } else {
         println!("State consistency: OK");
     }
@@ -143,7 +154,9 @@ async fn test_damage_and_healing() {
     }
 
     let config = HeadlessConfig::quick_start("Damage Test Fighter");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     let initial_hp = game.current_hp();
     let max_hp = game.max_hp();
@@ -174,7 +187,10 @@ async fn test_damage_and_healing() {
             .expect("DM should respond");
 
         println!("\n=== Round {} ===", i);
-        println!("Narrative: {}...", &response.narrative[..response.narrative.len().min(200)]);
+        println!(
+            "Narrative: {}...",
+            &response.narrative[..response.narrative.len().min(200)]
+        );
         println!("HP: {}/{}", game.current_hp(), game.max_hp());
     }
 
@@ -186,7 +202,10 @@ async fn test_damage_and_healing() {
 
     // Check if damage was tracked
     if final_hp < initial_hp {
-        println!("SUCCESS: Damage was tracked (lost {} HP)", initial_hp - final_hp);
+        println!(
+            "SUCCESS: Damage was tracked (lost {} HP)",
+            initial_hp - final_hp
+        );
     } else {
         println!("NOTE: No damage taken - enemies may have missed or combat went differently");
     }
@@ -203,7 +222,10 @@ async fn test_damage_and_healing() {
         println!("HP after healing: {}/{}", game.current_hp(), game.max_hp());
 
         if game.current_hp() > final_hp {
-            println!("SUCCESS: Healing was tracked (gained {} HP)", game.current_hp() - final_hp);
+            println!(
+                "SUCCESS: Healing was tracked (gained {} HP)",
+                game.current_hp() - final_hp
+            );
         } else {
             println!("WARNING: Second Wind may not have healed or was already used");
         }
@@ -224,7 +246,9 @@ async fn test_combat_resolution() {
     }
 
     let config = HeadlessConfig::quick_start("Victor");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Start combat
     let response1 = game
@@ -233,7 +257,10 @@ async fn test_combat_resolution() {
         .expect("DM should respond");
 
     println!("\n=== Combat Started ===");
-    println!("Narrative: {}...", &response1.narrative[..response1.narrative.len().min(200)]);
+    println!(
+        "Narrative: {}...",
+        &response1.narrative[..response1.narrative.len().min(200)]
+    );
     println!("in_combat: {}", response1.in_combat);
 
     // Fight until combat ends (max 10 rounds to avoid infinite loop)
@@ -246,14 +273,22 @@ async fn test_combat_resolution() {
             .expect("DM should respond");
 
         println!("\n=== Round {} ===", rounds);
-        println!("in_combat: {}, HP: {}/{}", game.in_combat(), game.current_hp(), game.max_hp());
+        println!(
+            "in_combat: {}, HP: {}/{}",
+            game.in_combat(),
+            game.current_hp(),
+            game.max_hp()
+        );
     }
 
     println!("\n=== Combat Resolution ===");
     if !game.in_combat() {
         println!("SUCCESS: Combat ended after {} rounds", rounds);
     } else {
-        println!("WARNING: Combat did not end after {} rounds (may need more)", rounds);
+        println!(
+            "WARNING: Combat did not end after {} rounds (may need more)",
+            rounds
+        );
     }
 
     // After combat, verify we can do non-combat things
@@ -264,7 +299,10 @@ async fn test_combat_resolution() {
             .expect("DM should respond");
 
         println!("\n=== Post-Combat Exploration ===");
-        println!("Narrative: {}...", &explore_response.narrative[..explore_response.narrative.len().min(200)]);
+        println!(
+            "Narrative: {}...",
+            &explore_response.narrative[..explore_response.narrative.len().min(200)]
+        );
         println!("in_combat: {}", explore_response.in_combat);
 
         if !explore_response.in_combat {
@@ -287,7 +325,9 @@ async fn test_hp_tracking_during_combat() {
     }
 
     let config = HeadlessConfig::quick_start("HP Tracker");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     let initial_hp = game.current_hp();
     let max_hp = game.max_hp();
@@ -315,8 +355,11 @@ async fn test_hp_tracking_during_combat() {
 
     // BUG CHECK: Response HP and game HP should match
     if response1.current_hp != game.current_hp() {
-        println!("BUG FOUND: Response HP ({}) doesn't match game.current_hp() ({})",
-            response1.current_hp, game.current_hp());
+        println!(
+            "BUG FOUND: Response HP ({}) doesn't match game.current_hp() ({})",
+            response1.current_hp,
+            game.current_hp()
+        );
     }
 
     hp_history.push(game.current_hp());
@@ -340,14 +383,20 @@ async fn test_hp_tracking_during_combat() {
 
         // BUG CHECK: HP should never exceed max
         if game.current_hp() > game.max_hp() {
-            println!("BUG FOUND: Current HP ({}) exceeds max HP ({})",
-                game.current_hp(), game.max_hp());
+            println!(
+                "BUG FOUND: Current HP ({}) exceeds max HP ({})",
+                game.current_hp(),
+                game.max_hp()
+            );
         }
 
         // BUG CHECK: HP should be consistent between response and game state
         if response.current_hp != game.current_hp() {
-            println!("BUG FOUND: Response HP ({}) doesn't match game.current_hp() ({})",
-                response.current_hp, game.current_hp());
+            println!(
+                "BUG FOUND: Response HP ({}) doesn't match game.current_hp() ({})",
+                response.current_hp,
+                game.current_hp()
+            );
         }
     }
 
@@ -357,9 +406,7 @@ async fn test_hp_tracking_during_combat() {
     }
 
     // Check for HP tracking consistency
-    let hp_changes: Vec<i32> = hp_history.windows(2)
-        .map(|w| w[1] - w[0])
-        .collect();
+    let hp_changes: Vec<i32> = hp_history.windows(2).map(|w| w[1] - w[0]).collect();
 
     println!("\nHP changes between turns: {:?}", hp_changes);
 
@@ -385,7 +432,9 @@ async fn test_comprehensive_combat_flow() {
     }
 
     let config = HeadlessConfig::quick_start("Comprehensive Tester");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== COMPREHENSIVE COMBAT FLOW TEST ===\n");
 
@@ -403,7 +452,10 @@ async fn test_comprehensive_combat_flow() {
         .await
         .expect("DM should respond");
 
-    println!("Narrative excerpt: {}...", &init_response.narrative[..init_response.narrative.len().min(150)]);
+    println!(
+        "Narrative excerpt: {}...",
+        &init_response.narrative[..init_response.narrative.len().min(150)]
+    );
     println!("in_combat (response): {}", init_response.in_combat);
     println!("in_combat (game): {}", game.in_combat());
     println!("is_player_turn: {}", init_response.is_player_turn);
@@ -438,7 +490,12 @@ async fn test_comprehensive_combat_flow() {
             }
 
             let _ = game.send("I strike again!").await;
-            println!("Attempt {}: in_combat={}, HP={}", i, game.in_combat(), game.current_hp());
+            println!(
+                "Attempt {}: in_combat={}, HP={}",
+                i,
+                game.in_combat(),
+                game.current_hp()
+            );
         }
     } else {
         println!("WARNING: Combat was not initiated - DM may have described scene differently");
@@ -452,6 +509,14 @@ async fn test_comprehensive_combat_flow() {
 
     // Summary
     println!("\n=== TEST SUMMARY ===");
-    println!("HP change: {} -> {} (delta: {})", pre_combat_hp, post_combat_hp, post_combat_hp - pre_combat_hp);
-    println!("Combat tracked: {}", game.in_combat() || pre_combat_hp != post_combat_hp);
+    println!(
+        "HP change: {} -> {} (delta: {})",
+        pre_combat_hp,
+        post_combat_hp,
+        post_combat_hp - pre_combat_hp
+    );
+    println!(
+        "Combat tracked: {}",
+        game.in_combat() || pre_combat_hp != post_combat_hp
+    );
 }

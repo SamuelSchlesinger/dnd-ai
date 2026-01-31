@@ -70,7 +70,9 @@ pub fn spawn_combat_effect(
             elapsed: 0.0,
             position,
         },
-        AnimationLifetime { remaining: duration + 0.1 },
+        AnimationLifetime {
+            remaining: duration + 0.1,
+        },
     ));
 }
 

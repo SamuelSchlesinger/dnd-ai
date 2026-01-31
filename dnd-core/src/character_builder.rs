@@ -355,10 +355,7 @@ impl CharacterBuilder {
                         ]
                     }
                     CharacterClass::Warlock => {
-                        vec![
-                            "Eldritch Blast".to_string(),
-                            "Chill Touch".to_string(),
-                        ]
+                        vec!["Eldritch Blast".to_string(), "Chill Touch".to_string()]
                     }
                     CharacterClass::Cleric => {
                         vec![
@@ -690,11 +687,15 @@ mod tests {
 
         // Wizard gets 3 cantrips at level 1
         assert_eq!(spellcasting.cantrips_known.len(), 3);
-        assert!(spellcasting.cantrips_known.contains(&"Fire Bolt".to_string()));
+        assert!(spellcasting
+            .cantrips_known
+            .contains(&"Fire Bolt".to_string()));
 
         // Wizard gets 6 spells at level 1
         assert_eq!(spellcasting.spells_known.len(), 6);
-        assert!(spellcasting.spells_known.contains(&"Magic Missile".to_string()));
+        assert!(spellcasting
+            .spells_known
+            .contains(&"Magic Missile".to_string()));
 
         // Wizard gets 2 first-level slots at level 1
         assert_eq!(spellcasting.spell_slots.slots[0].total, 2);
@@ -729,7 +730,9 @@ mod tests {
 
         // Warlock gets 2 cantrips at level 1
         assert_eq!(spellcasting.cantrips_known.len(), 2);
-        assert!(spellcasting.cantrips_known.contains(&"Eldritch Blast".to_string()));
+        assert!(spellcasting
+            .cantrips_known
+            .contains(&"Eldritch Blast".to_string()));
 
         // Warlock knows 2 spells at level 1
         assert_eq!(spellcasting.spells_known.len(), 2);

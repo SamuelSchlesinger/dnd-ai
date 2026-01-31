@@ -7,8 +7,8 @@
 use bevy::prelude::*;
 use dnd_core::rules::Effect;
 use dnd_core::world::{
-    AbilityScores, CombatState, Condition, DeathSaves, GameMode, GameTime, HitPoints, Item, Quest,
-    Skill, NarrativeType,
+    AbilityScores, CombatState, Condition, DeathSaves, GameMode, GameTime, HitPoints, Item,
+    NarrativeType, Quest, Skill,
 };
 use dnd_core::GameSession;
 use std::collections::HashMap;
@@ -184,7 +184,10 @@ impl WorldUpdate {
             mode: world.mode,
             game_time: world.game_time.clone(),
             player_name: character.name.clone(),
-            player_class: character.classes.first().map(|c| c.class.name().to_string()),
+            player_class: character
+                .classes
+                .first()
+                .map(|c| c.class.name().to_string()),
             player_level: character.level,
             player_ac: character.current_ac(),
             player_initiative: character.initiative_modifier(),
@@ -297,7 +300,11 @@ pub struct CharacterSaveList {
 /// Pending character list load - holds the receiver for async character list loading.
 #[derive(Resource)]
 pub struct PendingCharacterList {
-    pub receiver: std::sync::Mutex<std::sync::mpsc::Receiver<Result<Vec<dnd_core::CharacterSaveInfo>, dnd_core::persist::PersistError>>>,
+    pub receiver: std::sync::Mutex<
+        std::sync::mpsc::Receiver<
+            Result<Vec<dnd_core::CharacterSaveInfo>, dnd_core::persist::PersistError>,
+        >,
+    >,
 }
 
 /// Information about a game save file.
@@ -468,10 +475,9 @@ impl AppState {
     /// Add a command to input history.
     pub fn add_to_history(&mut self, command: String) {
         // Don't add empty or duplicate consecutive commands
-        if !command.trim().is_empty()
-            && self.input_history.last() != Some(&command) {
-                self.input_history.push(command);
-            }
+        if !command.trim().is_empty() && self.input_history.last() != Some(&command) {
+            self.input_history.push(command);
+        }
         // Keep history bounded
         if self.input_history.len() > 100 {
             self.input_history.remove(0);
@@ -547,7 +553,12 @@ pub fn handle_worker_responses(
                 app_state.streaming_text.push_str(&text);
             }
             WorkerResponse::Effect(effect) => {
-                crate::effects::process_effect(&mut app_state, &effect, &mut commands, time.elapsed_secs_f64());
+                crate::effects::process_effect(
+                    &mut app_state,
+                    &effect,
+                    &mut commands,
+                    time.elapsed_secs_f64(),
+                );
             }
             WorkerResponse::Complete {
                 narrative,
@@ -558,7 +569,11 @@ pub fn handle_worker_responses(
             } => {
                 // Add the complete narrative
                 if !narrative.is_empty() {
-                    app_state.add_narrative(narrative, NarrativeType::DmNarration, time.elapsed_secs_f64());
+                    app_state.add_narrative(
+                        narrative,
+                        NarrativeType::DmNarration,
+                        time.elapsed_secs_f64(),
+                    );
                 }
                 app_state.streaming_text.clear();
                 app_state.world = world_update;
@@ -608,7 +623,9 @@ pub fn check_pending_game_list(
     mut save_list: Option<ResMut<GameSaveList>>,
 ) {
     let Some(pending) = pending else { return };
-    let Some(ref mut list) = save_list else { return };
+    let Some(ref mut list) = save_list else {
+        return;
+    };
 
     let result = {
         let receiver = pending.receiver.lock().unwrap();
@@ -685,7 +702,9 @@ pub fn check_pending_character_list(
     mut save_list: Option<ResMut<CharacterSaveList>>,
 ) {
     let Some(pending) = pending else { return };
-    let Some(ref mut list) = save_list else { return };
+    let Some(ref mut list) = save_list else {
+        return;
+    };
 
     let result = {
         let receiver = pending.receiver.lock().unwrap();
@@ -741,7 +760,9 @@ pub fn check_pending_session(
             app_state.set_status_persistent("Adventure begins!");
 
             // Send initial action to get the DM's opening narration
-            app_state.send_action("I begin my adventure. Set the scene and describe where I am.".to_string());
+            app_state.send_action(
+                "I begin my adventure. Set the scene and describe where I am.".to_string(),
+            );
 
             // Remove the pending resource
             commands.remove_resource::<PendingSession>();
@@ -804,22 +825,20 @@ async fn worker_loop(
                 };
                 let _ = response_tx.send(response).await;
             }
-            Some(WorkerRequest::Load(path)) => {
-                match GameSession::load(&path).await {
-                    Ok(new_session) => {
-                        session = new_session;
-                        let world_update = WorldUpdate::from_session(&session);
-                        let _ = response_tx
-                            .send(WorkerResponse::LoadComplete(Ok(world_update)))
-                            .await;
-                    }
-                    Err(e) => {
-                        let _ = response_tx
-                            .send(WorkerResponse::LoadComplete(Err(e.to_string())))
-                            .await;
-                    }
+            Some(WorkerRequest::Load(path)) => match GameSession::load(&path).await {
+                Ok(new_session) => {
+                    session = new_session;
+                    let world_update = WorldUpdate::from_session(&session);
+                    let _ = response_tx
+                        .send(WorkerResponse::LoadComplete(Ok(world_update)))
+                        .await;
                 }
-            }
+                Err(e) => {
+                    let _ = response_tx
+                        .send(WorkerResponse::LoadComplete(Err(e.to_string())))
+                        .await;
+                }
+            },
             Some(WorkerRequest::Shutdown) | None => {
                 break;
             }
@@ -870,9 +889,7 @@ async fn process_player_action(
                 .await;
         }
         Err(e) => {
-            let _ = response_tx
-                .send(WorkerResponse::Error(e.to_string()))
-                .await;
+            let _ = response_tx.send(WorkerResponse::Error(e.to_string())).await;
         }
     }
 }

@@ -426,9 +426,7 @@ pub fn process_effect(
         } => {
             animations::spawn_combat_effect(commands, EffectType::DamageFlash, Vec2::ZERO, 0.8);
             app_state.add_narrative(
-                format!(
-                    "DEATH SAVE FAILURE from {source}! ({total_failures}/3 failures)"
-                ),
+                format!("DEATH SAVE FAILURE from {source}! ({total_failures}/3 failures)"),
                 NarrativeType::Combat,
                 time,
             );
@@ -472,9 +470,7 @@ pub fn process_effect(
                 Vec2::new(400.0, 300.0),
             );
             app_state.add_narrative(
-                format!(
-                    "Death save SUCCESS! Rolled {roll} ({total_successes}/3 successes)"
-                ),
+                format!("Death save SUCCESS! Rolled {roll} ({total_successes}/3 successes)"),
                 NarrativeType::Combat,
                 time,
             );
@@ -550,7 +546,9 @@ pub fn process_effect(
 
         Effect::RageStarted { damage_bonus, .. } => {
             app_state.add_narrative(
-                format!("RAGE! +{damage_bonus} damage to melee attacks, resistance to physical damage"),
+                format!(
+                    "RAGE! +{damage_bonus} damage to melee attacks, resistance to physical damage"
+                ),
                 NarrativeType::System,
                 time,
             );
@@ -558,11 +556,7 @@ pub fn process_effect(
         }
 
         Effect::RageEnded { reason, .. } => {
-            app_state.add_narrative(
-                format!("Rage ended: {reason}"),
-                NarrativeType::System,
-                time,
-            );
+            app_state.add_narrative(format!("Rage ended: {reason}"), NarrativeType::System, time);
         }
     }
 }

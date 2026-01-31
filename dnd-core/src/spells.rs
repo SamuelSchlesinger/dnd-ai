@@ -98,30 +98,56 @@ pub struct Components {
 
 impl Components {
     pub fn v() -> Self {
-        Self { verbal: true, somatic: false, material: None }
+        Self {
+            verbal: true,
+            somatic: false,
+            material: None,
+        }
     }
 
     pub fn vs() -> Self {
-        Self { verbal: true, somatic: true, material: None }
+        Self {
+            verbal: true,
+            somatic: true,
+            material: None,
+        }
     }
 
     pub fn vsm(material: &str) -> Self {
-        Self { verbal: true, somatic: true, material: Some(material.to_string()) }
+        Self {
+            verbal: true,
+            somatic: true,
+            material: Some(material.to_string()),
+        }
     }
 
     pub fn s() -> Self {
-        Self { verbal: false, somatic: true, material: None }
+        Self {
+            verbal: false,
+            somatic: true,
+            material: None,
+        }
     }
 
     pub fn sm(material: &str) -> Self {
-        Self { verbal: false, somatic: true, material: Some(material.to_string()) }
+        Self {
+            verbal: false,
+            somatic: true,
+            material: Some(material.to_string()),
+        }
     }
 
     pub fn description(&self) -> String {
         let mut parts = Vec::new();
-        if self.verbal { parts.push("V"); }
-        if self.somatic { parts.push("S"); }
-        if self.material.is_some() { parts.push("M"); }
+        if self.verbal {
+            parts.push("V");
+        }
+        if self.somatic {
+            parts.push("S");
+        }
+        if self.material.is_some() {
+            parts.push("M");
+        }
         let base = parts.join(", ");
         if let Some(ref mat) = self.material {
             format!("{} ({})", base, mat)
@@ -168,10 +194,10 @@ pub enum SpellAttackType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AreaOfEffect {
     None,
-    Sphere(u32),      // Radius in feet
-    Cube(u32),        // Side length in feet
-    Cone(u32),        // Length in feet
-    Line(u32, u32),   // Length, width in feet
+    Sphere(u32),        // Radius in feet
+    Cube(u32),          // Side length in feet
+    Cone(u32),          // Length in feet
+    Line(u32, u32),     // Length, width in feet
     Cylinder(u32, u32), // Radius, height in feet
 }
 
@@ -303,7 +329,9 @@ pub fn spells_by_level(level: u8) -> impl Iterator<Item = &'static SpellData> {
 
 /// Get all spells available to a class.
 pub fn spells_for_class(class: SpellClass) -> impl Iterator<Item = &'static SpellData> {
-    SPELL_DATABASE.values().filter(move |s| s.classes.contains(&class))
+    SPELL_DATABASE
+        .values()
+        .filter(move |s| s.classes.contains(&class))
 }
 
 fn build_spell_database() -> HashMap<String, SpellData> {

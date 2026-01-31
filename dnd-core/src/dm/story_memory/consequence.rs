@@ -279,14 +279,9 @@ mod tests {
         let entity2 = EntityId::new();
         let entity3 = EntityId::new();
 
-        let consequence = Consequence::new(
-            "Trigger",
-            "Effect",
-            ConsequenceSeverity::Minor,
-            0,
-        )
-        .with_subject(entity1)
-        .with_related(entity2);
+        let consequence = Consequence::new("Trigger", "Effect", ConsequenceSeverity::Minor, 0)
+            .with_subject(entity1)
+            .with_related(entity2);
 
         assert!(consequence.involves(entity1));
         assert!(consequence.involves(entity2));

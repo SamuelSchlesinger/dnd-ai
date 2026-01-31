@@ -52,11 +52,7 @@ pub fn render_input_panel(ctx: &egui::Context, app_state: &mut AppState) {
                     // Add to history
                     app_state.add_to_history(action.clone());
                     // Add player action to narrative
-                    app_state.add_narrative(
-                        action.clone(),
-                        NarrativeType::PlayerAction,
-                        0.0,
-                    );
+                    app_state.add_narrative(action.clone(), NarrativeType::PlayerAction, 0.0);
                     app_state.send_action(action);
                 }
 
@@ -68,7 +64,8 @@ pub fn render_input_panel(ctx: &egui::Context, app_state: &mut AppState) {
                 ui.add_space(8.0);
 
                 // Send button
-                let send_enabled = !app_state.is_processing && !app_state.input_text.trim().is_empty();
+                let send_enabled =
+                    !app_state.is_processing && !app_state.input_text.trim().is_empty();
                 if ui
                     .add_enabled(send_enabled, egui::Button::new("Send"))
                     .clicked()
@@ -95,12 +92,20 @@ pub fn render_input_panel(ctx: &egui::Context, app_state: &mut AppState) {
                         }
                         if ui.small_button("Dodge").clicked() {
                             let action = "I take the Dodge action".to_string();
-                            app_state.add_narrative(action.clone(), NarrativeType::PlayerAction, 0.0);
+                            app_state.add_narrative(
+                                action.clone(),
+                                NarrativeType::PlayerAction,
+                                0.0,
+                            );
                             app_state.send_action(action);
                         }
                         if ui.small_button("Disengage").clicked() {
                             let action = "I take the Disengage action".to_string();
-                            app_state.add_narrative(action.clone(), NarrativeType::PlayerAction, 0.0);
+                            app_state.add_narrative(
+                                action.clone(),
+                                NarrativeType::PlayerAction,
+                                0.0,
+                            );
                             app_state.send_action(action);
                         }
                         ui.add_space(8.0);

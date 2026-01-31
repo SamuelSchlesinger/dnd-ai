@@ -353,7 +353,7 @@ mod tests {
                         is_ally: false,
                         current_hp: 7,
                         max_hp: 7,
-                        armor_class: 13, // Goblin AC from SRD
+                        armor_class: 13,        // Goblin AC from SRD
                         initiative_modifier: 2, // Goblin DEX +2 from SRD
                     },
                 ],
@@ -474,7 +474,10 @@ mod tests {
 
         // 5. Verify we can retrieve the consequence
         let stored = harness.dm.story_memory().get_consequence(consequence_id);
-        assert!(stored.is_some(), "Should be able to retrieve consequence by ID");
+        assert!(
+            stored.is_some(),
+            "Should be able to retrieve consequence by ID"
+        );
 
         let stored = stored.unwrap();
         assert_eq!(stored.severity, ConsequenceSeverity::Major);
@@ -529,7 +532,10 @@ mod tests {
             "Should find one consequence involving Baron"
         );
 
-        let riverside_consequences = harness.dm.story_memory().consequences_involving(riverside_id);
+        let riverside_consequences = harness
+            .dm
+            .story_memory()
+            .consequences_involving(riverside_id);
         assert_eq!(
             riverside_consequences.len(),
             1,
@@ -538,7 +544,10 @@ mod tests {
 
         // 9. Test triggering the consequence
         assert!(
-            harness.dm.story_memory_mut().trigger_consequence(consequence_id),
+            harness
+                .dm
+                .story_memory_mut()
+                .trigger_consequence(consequence_id),
             "Should successfully trigger consequence"
         );
 
@@ -549,7 +558,11 @@ mod tests {
             "Should have no pending consequences after triggering"
         );
 
-        let triggered = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        let triggered = harness
+            .dm
+            .story_memory()
+            .get_consequence(consequence_id)
+            .unwrap();
         assert_eq!(
             triggered.status,
             ConsequenceStatus::Triggered,
@@ -575,12 +588,15 @@ mod tests {
         let mut harness = TestHarness::new();
 
         // Create a consequence that expires in 3 turns
-        let consequence_id = harness.dm.story_memory_mut().create_consequence_with_expiry(
-            "Player is in the haunted forest at midnight",
-            "Ghostly apparitions attack",
-            ConsequenceSeverity::Moderate,
-            3,
-        );
+        let consequence_id = harness
+            .dm
+            .story_memory_mut()
+            .create_consequence_with_expiry(
+                "Player is in the haunted forest at midnight",
+                "Ghostly apparitions attack",
+                ConsequenceSeverity::Moderate,
+                3,
+            );
 
         assert_eq!(harness.dm.story_memory().pending_consequence_count(), 1);
 
@@ -610,7 +626,11 @@ mod tests {
             "Should be expired after turn 3"
         );
 
-        let consequence = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        let consequence = harness
+            .dm
+            .story_memory()
+            .get_consequence(consequence_id)
+            .unwrap();
         assert_eq!(
             consequence.status,
             ConsequenceStatus::Expired,
@@ -685,7 +705,10 @@ mod tests {
 
         // Resolve the consequence without triggering (e.g., player paid the debt)
         assert!(
-            harness.dm.story_memory_mut().resolve_consequence(consequence_id),
+            harness
+                .dm
+                .story_memory_mut()
+                .resolve_consequence(consequence_id),
             "Should successfully resolve consequence"
         );
 
@@ -695,7 +718,11 @@ mod tests {
             "Should have no pending consequences after resolution"
         );
 
-        let resolved = harness.dm.story_memory().get_consequence(consequence_id).unwrap();
+        let resolved = harness
+            .dm
+            .story_memory()
+            .get_consequence(consequence_id)
+            .unwrap();
         assert_eq!(
             resolved.status,
             ConsequenceStatus::Resolved,

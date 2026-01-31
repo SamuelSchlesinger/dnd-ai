@@ -36,7 +36,9 @@ pub fn main_ui_system(
 
             // Render overlays (Settings and LoadCharacter can be accessed from main menu)
             match app_state.overlay {
-                ActiveOverlay::Settings => { overlays::render_settings(ctx, &mut app_state); }
+                ActiveOverlay::Settings => {
+                    overlays::render_settings(ctx, &mut app_state);
+                }
                 ActiveOverlay::LoadCharacter => {
                     if let Some(ref mut list) = char_save_list {
                         // Load saves if not already loaded and not currently loading
@@ -44,15 +46,21 @@ pub fn main_ui_system(
                             list.loading = true;
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
-                                let result = crate::runtime::RUNTIME.block_on(dnd_core::persist::list_character_saves("saves/characters"));
+                                let result = crate::runtime::RUNTIME.block_on(
+                                    dnd_core::persist::list_character_saves("saves/characters"),
+                                );
                                 let _ = tx.send(result);
                             });
 
                             // Store receiver to check later
-                            commands.insert_resource(PendingCharacterList { receiver: std::sync::Mutex::new(rx) });
+                            commands.insert_resource(PendingCharacterList {
+                                receiver: std::sync::Mutex::new(rx),
+                            });
                         }
 
-                        if let Some(character) = overlays::render_load_character(ctx, &mut app_state, list) {
+                        if let Some(character) =
+                            overlays::render_load_character(ctx, &mut app_state, list)
+                        {
                             // Start game with loaded character
                             commands.insert_resource(ReadyToStart {
                                 character,
@@ -69,11 +77,14 @@ pub fn main_ui_system(
                             list.loading = true;
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
-                                let result = crate::runtime::RUNTIME.block_on(list_game_saves("saves"));
+                                let result =
+                                    crate::runtime::RUNTIME.block_on(list_game_saves("saves"));
                                 let _ = tx.send(result);
                             });
 
-                            commands.insert_resource(PendingGameList { receiver: std::sync::Mutex::new(rx) });
+                            commands.insert_resource(PendingGameList {
+                                receiver: std::sync::Mutex::new(rx),
+                            });
                         }
 
                         if let Some(path) = overlays::render_load_game(ctx, &mut app_state, list) {
@@ -82,11 +93,15 @@ pub fn main_ui_system(
                             let (tx, rx) = std::sync::mpsc::channel();
                             std::thread::spawn(move || {
                                 let result = crate::runtime::RUNTIME.block_on(async {
-                                    dnd_core::GameSession::load(&path).await.map_err(|e| e.to_string())
+                                    dnd_core::GameSession::load(&path)
+                                        .await
+                                        .map_err(|e| e.to_string())
                                 });
                                 let _ = tx.send(result);
                             });
-                            commands.insert_resource(PendingGameLoad { receiver: std::sync::Mutex::new(rx) });
+                            commands.insert_resource(PendingGameLoad {
+                                receiver: std::sync::Mutex::new(rx),
+                            });
                         }
                     }
                 }
@@ -125,7 +140,9 @@ pub fn main_ui_system(
             match app_state.overlay {
                 ActiveOverlay::None => {}
                 ActiveOverlay::Inventory => overlays::render_inventory(ctx, &app_state),
-                ActiveOverlay::CharacterSheet => overlays::render_character_sheet(ctx, &mut app_state),
+                ActiveOverlay::CharacterSheet => {
+                    overlays::render_character_sheet(ctx, &mut app_state)
+                }
                 ActiveOverlay::QuestLog => overlays::render_quest_log(ctx, &app_state),
                 ActiveOverlay::Help => overlays::render_help(ctx),
                 ActiveOverlay::Settings => {
@@ -190,7 +207,8 @@ fn configure_style(ctx: &egui::Context) {
 
     // Enhanced hover state with gold tint
     visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(90, 75, 50); // Brighter with gold tint
-    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(218, 165, 32)); // Gold stroke
+    visuals.widgets.hovered.bg_stroke =
+        egui::Stroke::new(1.0, egui::Color32::from_rgb(218, 165, 32)); // Gold stroke
     visuals.widgets.hovered.expansion = 1.0; // Slight expansion on hover
 
     // Active/pressed state
@@ -237,19 +255,20 @@ pub fn handle_keyboard_input(
     let ctx = contexts.ctx_mut();
 
     // Ctrl+Q / Cmd+Q to quit (works anywhere)
-    let ctrl_pressed = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight)
-        || keys.pressed(KeyCode::SuperLeft) || keys.pressed(KeyCode::SuperRight);
+    let ctrl_pressed = keys.pressed(KeyCode::ControlLeft)
+        || keys.pressed(KeyCode::ControlRight)
+        || keys.pressed(KeyCode::SuperLeft)
+        || keys.pressed(KeyCode::SuperRight);
 
     if ctrl_pressed && keys.just_pressed(KeyCode::KeyQ) {
         std::process::exit(0);
     }
 
     // Close overlays with Escape (works in any phase)
-    if keys.just_pressed(KeyCode::Escape)
-        && app_state.overlay != ActiveOverlay::None {
-            app_state.overlay = ActiveOverlay::None;
-            return;
-        }
+    if keys.just_pressed(KeyCode::Escape) && app_state.overlay != ActiveOverlay::None {
+        app_state.overlay = ActiveOverlay::None;
+        return;
+    }
 
     // Only handle other shortcuts during gameplay
     if *game_phase.get() != GamePhase::Playing {
@@ -257,15 +276,19 @@ pub fn handle_keyboard_input(
     }
 
     // Ctrl+S for quick save (works even while typing)
-    if ctrl_pressed && keys.just_pressed(KeyCode::KeyS)
-        && !app_state.is_saving && !app_state.is_processing && app_state.has_session() {
-            if let Some(tx) = &app_state.request_tx {
-                let path = dnd_core::persist::auto_save_path("saves", &app_state.world.campaign_name);
-                let _ = tx.try_send(crate::state::WorkerRequest::Save(path));
-                app_state.is_saving = true;
-                app_state.set_status_persistent("Saving...");
-            }
+    if ctrl_pressed
+        && keys.just_pressed(KeyCode::KeyS)
+        && !app_state.is_saving
+        && !app_state.is_processing
+        && app_state.has_session()
+    {
+        if let Some(tx) = &app_state.request_tx {
+            let path = dnd_core::persist::auto_save_path("saves", &app_state.world.campaign_name);
+            let _ = tx.try_send(crate::state::WorkerRequest::Save(path));
+            app_state.is_saving = true;
+            app_state.set_status_persistent("Saving...");
         }
+    }
 
     // Don't handle other shortcuts if egui wants keyboard input (user is typing)
     if ctx.wants_keyboard_input() {
@@ -311,7 +334,11 @@ async fn list_game_saves(dir: &str) -> Result<Vec<GameSaveInfo>, String> {
         }
 
         // Skip character saves (they're in saves/characters/)
-        if path.file_name().map(|n| n.to_string_lossy().contains("character")).unwrap_or(false) {
+        if path
+            .file_name()
+            .map(|n| n.to_string_lossy().contains("character"))
+            .unwrap_or(false)
+        {
             continue;
         }
 
@@ -332,4 +359,3 @@ async fn list_game_saves(dir: &str) -> Result<Vec<GameSaveInfo>, String> {
 
     Ok(saves)
 }
-

@@ -528,7 +528,10 @@ impl ToolResult {
 /// Events from a streaming response.
 #[derive(Debug, Clone)]
 pub enum StreamEvent {
-    MessageStart { id: String, model: String },
+    MessageStart {
+        id: String,
+        model: String,
+    },
     ContentBlockStart {
         index: usize,
         content_type: String,
@@ -537,13 +540,25 @@ pub enum StreamEvent {
         /// Tool name (only present for tool_use blocks)
         tool_name: Option<String>,
     },
-    TextDelta { index: usize, text: String },
-    InputJsonDelta { index: usize, partial_json: String },
-    ContentBlockStop { index: usize },
-    MessageDelta { stop_reason: Option<StopReason> },
+    TextDelta {
+        index: usize,
+        text: String,
+    },
+    InputJsonDelta {
+        index: usize,
+        partial_json: String,
+    },
+    ContentBlockStop {
+        index: usize,
+    },
+    MessageDelta {
+        stop_reason: Option<StopReason>,
+    },
     MessageStop,
     Ping,
-    Error { message: String },
+    Error {
+        message: String,
+    },
 }
 
 // ============================================================================

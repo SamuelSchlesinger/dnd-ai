@@ -11,25 +11,37 @@ use crate::world::{
 /// Get a standard weapon by name.
 pub fn get_weapon(name: &str) -> Option<WeaponItem> {
     let name_lower = name.to_lowercase();
-    WEAPONS.iter().find(|w| w.base.name.to_lowercase() == name_lower).cloned()
+    WEAPONS
+        .iter()
+        .find(|w| w.base.name.to_lowercase() == name_lower)
+        .cloned()
 }
 
 /// Get a standard armor piece by name.
 pub fn get_armor(name: &str) -> Option<ArmorItem> {
     let name_lower = name.to_lowercase();
-    ARMORS.iter().find(|a| a.base.name.to_lowercase() == name_lower).cloned()
+    ARMORS
+        .iter()
+        .find(|a| a.base.name.to_lowercase() == name_lower)
+        .cloned()
 }
 
 /// Get a standard potion by name.
 pub fn get_potion(name: &str) -> Option<ConsumableItem> {
     let name_lower = name.to_lowercase();
-    POTIONS.iter().find(|p| p.base.name.to_lowercase() == name_lower).cloned()
+    POTIONS
+        .iter()
+        .find(|p| p.base.name.to_lowercase() == name_lower)
+        .cloned()
 }
 
 /// Get a standard adventuring item by name.
 pub fn get_adventuring_gear(name: &str) -> Option<Item> {
     let name_lower = name.to_lowercase();
-    ADVENTURING_GEAR.iter().find(|i| i.name.to_lowercase() == name_lower).cloned()
+    ADVENTURING_GEAR
+        .iter()
+        .find(|i| i.name.to_lowercase() == name_lower)
+        .cloned()
 }
 
 /// Try to find any standard item by name.
@@ -500,10 +512,22 @@ mod tests {
 
     #[test]
     fn test_find_item() {
-        assert!(matches!(find_item("Longsword"), Some(StandardItem::Weapon(_))));
-        assert!(matches!(find_item("Chain Mail"), Some(StandardItem::Armor(_))));
-        assert!(matches!(find_item("Potion of Healing"), Some(StandardItem::Consumable(_))));
-        assert!(matches!(find_item("Rope (50 feet)"), Some(StandardItem::Item(_))));
+        assert!(matches!(
+            find_item("Longsword"),
+            Some(StandardItem::Weapon(_))
+        ));
+        assert!(matches!(
+            find_item("Chain Mail"),
+            Some(StandardItem::Armor(_))
+        ));
+        assert!(matches!(
+            find_item("Potion of Healing"),
+            Some(StandardItem::Consumable(_))
+        ));
+        assert!(matches!(
+            find_item("Rope (50 feet)"),
+            Some(StandardItem::Item(_))
+        ));
         assert!(find_item("Nonexistent Item").is_none());
     }
 }

@@ -241,11 +241,8 @@ pub enum Intent {
     // ========================================================================
     // Class Feature Intents
     // ========================================================================
-
     /// Barbarian enters a rage
-    UseRage {
-        character_id: CharacterId,
-    },
+    UseRage { character_id: CharacterId },
 
     /// Barbarian ends their rage
     EndRage {
@@ -312,9 +309,7 @@ pub enum Intent {
     },
 
     /// Fighter uses Second Wind
-    UseSecondWind {
-        character_id: CharacterId,
-    },
+    UseSecondWind { character_id: CharacterId },
 
     /// Sorcerer uses Sorcery Points for Metamagic
     UseSorceryPoints {
@@ -1122,7 +1117,10 @@ impl RulesEngine {
         } else {
             format!(" (level {} slot)", effective_slot)
         };
-        narrative_parts.push(format!("{} casts {}{}!", caster.name, spell.name, slot_text));
+        narrative_parts.push(format!(
+            "{} casts {}{}!",
+            caster.name, spell.name, slot_text
+        ));
 
         // Handle concentration
         if spell.concentration {
@@ -1195,10 +1193,8 @@ impl RulesEngine {
                     };
 
                     if let Ok(damage_roll) = dice::roll(&damage_formula) {
-                        let damage_type_name = spell
-                            .damage_type
-                            .map(|dt| dt.name())
-                            .unwrap_or("magical");
+                        let damage_type_name =
+                            spell.damage_type.map(|dt| dt.name()).unwrap_or("magical");
 
                         narrative_parts.push(format!(
                             "Deals {} {} damage.",
@@ -1239,10 +1235,8 @@ impl RulesEngine {
             // Roll damage (before save resolution)
             if let Some(ref dice_str) = damage_dice {
                 if let Ok(damage_roll) = dice::roll(dice_str) {
-                    let damage_type_name = spell
-                        .damage_type
-                        .map(|dt| dt.name())
-                        .unwrap_or("magical");
+                    let damage_type_name =
+                        spell.damage_type.map(|dt| dt.name()).unwrap_or("magical");
 
                     narrative_parts.push(format!(
                         "On a failed save: {} {} damage.",
@@ -1396,18 +1390,19 @@ impl RulesEngine {
 
         // Unconscious characters automatically fail Strength and Dexterity checks
         if character.has_condition(Condition::Unconscious)
-            && matches!(ability, Ability::Strength | Ability::Dexterity) {
-                return Resolution::new(format!(
-                    "{} is unconscious and automatically fails the {} check!",
-                    character.name,
-                    ability.abbreviation()
-                ))
-                .with_effect(Effect::CheckFailed {
-                    check_type: format!("{} check", ability.abbreviation()),
-                    roll: 0,
-                    dc,
-                });
-            }
+            && matches!(ability, Ability::Strength | Ability::Dexterity)
+        {
+            return Resolution::new(format!(
+                "{} is unconscious and automatically fails the {} check!",
+                character.name,
+                ability.abbreviation()
+            ))
+            .with_effect(Effect::CheckFailed {
+                check_type: format!("{} check", ability.abbreviation()),
+                roll: 0,
+                dc,
+            });
+        }
 
         let modifier = character.ability_scores.modifier(ability);
 
@@ -1459,18 +1454,19 @@ impl RulesEngine {
 
         // Unconscious characters automatically fail Strength and Dexterity saving throws
         if character.has_condition(Condition::Unconscious)
-            && matches!(ability, Ability::Strength | Ability::Dexterity) {
-                return Resolution::new(format!(
-                    "{} is unconscious and automatically fails the {} saving throw!",
-                    character.name,
-                    ability.abbreviation()
-                ))
-                .with_effect(Effect::CheckFailed {
-                    check_type: format!("{} save", ability.abbreviation()),
-                    roll: 0,
-                    dc,
-                });
-            }
+            && matches!(ability, Ability::Strength | Ability::Dexterity)
+        {
+            return Resolution::new(format!(
+                "{} is unconscious and automatically fails the {} saving throw!",
+                character.name,
+                ability.abbreviation()
+            ))
+            .with_effect(Effect::CheckFailed {
+                check_type: format!("{} save", ability.abbreviation()),
+                roll: 0,
+                dc,
+            });
+        }
 
         let modifier = character.saving_throw_modifier(ability);
 
@@ -1997,12 +1993,7 @@ impl RulesEngine {
         })
     }
 
-    fn resolve_remove_item(
-        &self,
-        world: &GameWorld,
-        item_name: &str,
-        quantity: u32,
-    ) -> Resolution {
+    fn resolve_remove_item(&self, world: &GameWorld, item_name: &str, quantity: u32) -> Resolution {
         let character = &world.player_character;
 
         if let Some(item) = character.inventory.find_item(item_name) {
@@ -2029,10 +2020,7 @@ impl RulesEngine {
                 ))
             }
         } else {
-            Resolution::new(format!(
-                "{} doesn't have any {}",
-                character.name, item_name
-            ))
+            Resolution::new(format!("{} doesn't have any {}", character.name, item_name))
         }
     }
 
@@ -2113,10 +2101,22 @@ impl RulesEngine {
         let character = &world.player_character;
 
         let item_name = match slot.to_lowercase().as_str() {
-            "armor" => character.equipment.armor.as_ref().map(|a| a.base.name.clone()),
+            "armor" => character
+                .equipment
+                .armor
+                .as_ref()
+                .map(|a| a.base.name.clone()),
             "shield" => character.equipment.shield.as_ref().map(|s| s.name.clone()),
-            "main_hand" | "weapon" => character.equipment.main_hand.as_ref().map(|w| w.base.name.clone()),
-            "off_hand" => character.equipment.off_hand.as_ref().map(|i| i.name.clone()),
+            "main_hand" | "weapon" => character
+                .equipment
+                .main_hand
+                .as_ref()
+                .map(|w| w.base.name.clone()),
+            "off_hand" => character
+                .equipment
+                .off_hand
+                .as_ref()
+                .map(|i| i.name.clone()),
             _ => {
                 return Resolution::new(format!(
                     "Unknown equipment slot: {slot}. Valid slots: armor, shield, main_hand, off_hand"
@@ -2125,11 +2125,12 @@ impl RulesEngine {
         };
 
         if let Some(name) = item_name {
-            Resolution::new(format!("{} unequips {}", character.name, name))
-                .with_effect(Effect::ItemUnequipped {
+            Resolution::new(format!("{} unequips {}", character.name, name)).with_effect(
+                Effect::ItemUnequipped {
                     item_name: name,
                     slot: slot.to_string(),
-                })
+                },
+            )
         } else {
             Resolution::new(format!("Nothing equipped in {slot} slot"))
         }
@@ -2156,16 +2157,17 @@ impl RulesEngine {
             match item.item_type {
                 ItemType::Potion => {
                     // Look up proper healing amount from database, fall back to basic potion
-                    let (dice_expr, bonus) = if let Some(potion) = crate::items::get_potion(item_name) {
-                        match potion.effect {
-                            crate::world::ConsumableEffect::Healing { ref dice, bonus } => {
-                                (dice.clone(), bonus)
+                    let (dice_expr, bonus) =
+                        if let Some(potion) = crate::items::get_potion(item_name) {
+                            match potion.effect {
+                                crate::world::ConsumableEffect::Healing { ref dice, bonus } => {
+                                    (dice.clone(), bonus)
+                                }
+                                _ => ("2d4".to_string(), 2),
                             }
-                            _ => ("2d4".to_string(), 2),
-                        }
-                    } else {
-                        ("2d4".to_string(), 2) // Default healing potion
-                    };
+                        } else {
+                            ("2d4".to_string(), 2) // Default healing potion
+                        };
 
                     let heal_expr = if bonus != 0 {
                         format!("{dice_expr}+{bonus}")
@@ -2196,24 +2198,20 @@ impl RulesEngine {
                         remaining: item.quantity.saturating_sub(1),
                     })
                 }
-                ItemType::Scroll => {
-                    Resolution::new(format!(
-                        "{} reads {} and it crumbles to dust",
-                        character.name, item_name
-                    ))
-                    .with_effect(Effect::ItemUsed {
-                        item_name: item_name.to_string(),
-                        result: "Scroll consumed".to_string(),
-                    })
-                    .with_effect(Effect::ItemRemoved {
-                        item_name: item_name.to_string(),
-                        quantity: 1,
-                        remaining: item.quantity.saturating_sub(1),
-                    })
-                }
-                _ => Resolution::new(format!(
-                    "{item_name} is not a consumable item"
-                )),
+                ItemType::Scroll => Resolution::new(format!(
+                    "{} reads {} and it crumbles to dust",
+                    character.name, item_name
+                ))
+                .with_effect(Effect::ItemUsed {
+                    item_name: item_name.to_string(),
+                    result: "Scroll consumed".to_string(),
+                })
+                .with_effect(Effect::ItemRemoved {
+                    item_name: item_name.to_string(),
+                    quantity: 1,
+                    remaining: item.quantity.saturating_sub(1),
+                }),
+                _ => Resolution::new(format!("{item_name} is not a consumable item")),
             }
         } else {
             Resolution::new(format!(
@@ -2236,7 +2234,11 @@ impl RulesEngine {
             let action = if amount >= 0.0 { "gains" } else { "spends" };
             Resolution::new(format!(
                 "{} {} {:.0} gp {} (now has {:.0} gp)",
-                character.name, action, amount.abs(), reason, new_total
+                character.name,
+                action,
+                amount.abs(),
+                reason,
+                new_total
             ))
             .with_effect(Effect::GoldChanged {
                 amount,
@@ -2274,7 +2276,9 @@ impl RulesEngine {
                 "{} rolls a NATURAL 20 on their death save! They regain 1 HP and become conscious!",
                 character.name
             ))
-            .with_effect(Effect::DeathSavesReset { target_id: character_id })
+            .with_effect(Effect::DeathSavesReset {
+                target_id: character_id,
+            })
             .with_effect(Effect::HpChanged {
                 target_id: character_id,
                 amount: 1,
@@ -2495,11 +2499,7 @@ impl RulesEngine {
     // Class Feature Resolution Functions
     // ========================================================================
 
-    fn resolve_use_rage(
-        &self,
-        world: &GameWorld,
-        _character_id: CharacterId,
-    ) -> Resolution {
+    fn resolve_use_rage(&self, world: &GameWorld, _character_id: CharacterId) -> Resolution {
         let character = &world.player_character;
 
         // Check if already raging
@@ -2636,9 +2636,8 @@ impl RulesEngine {
         let character = &world.player_character;
         let pool = world.player_character.class_resources.lay_on_hands_pool;
 
-        let total_cost = hp_amount
-            + if cure_disease { 5 } else { 0 }
-            + if neutralize_poison { 5 } else { 0 };
+        let total_cost =
+            hp_amount + if cure_disease { 5 } else { 0 } + if neutralize_poison { 5 } else { 0 };
 
         if pool < total_cost {
             return Resolution::new(format!(
@@ -2739,11 +2738,13 @@ impl RulesEngine {
         let character = &world.player_character;
 
         // Check if already in Wild Shape
-        if world.player_character.class_resources.wild_shape_form.is_some() {
-            return Resolution::new(format!(
-                "{} is already in Wild Shape form!",
-                character.name
-            ));
+        if world
+            .player_character
+            .class_resources
+            .wild_shape_form
+            .is_some()
+        {
+            return Resolution::new(format!("{} is already in Wild Shape form!", character.name));
         }
 
         // Find Wild Shape feature uses
@@ -2793,7 +2794,12 @@ impl RulesEngine {
     ) -> Resolution {
         let character = &world.player_character;
 
-        if world.player_character.class_resources.wild_shape_form.is_none() {
+        if world
+            .player_character
+            .class_resources
+            .wild_shape_form
+            .is_none()
+        {
             return Resolution::new(format!(
                 "{} is not currently in Wild Shape form.",
                 character.name
@@ -2970,11 +2976,7 @@ impl RulesEngine {
         })
     }
 
-    fn resolve_use_second_wind(
-        &self,
-        world: &GameWorld,
-        _character_id: CharacterId,
-    ) -> Resolution {
+    fn resolve_use_second_wind(&self, world: &GameWorld, _character_id: CharacterId) -> Resolution {
         let character = &world.player_character;
 
         if world.player_character.class_resources.second_wind_used {
@@ -3184,9 +3186,11 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
             duration_rounds,
             ..
         } => {
-            world
-                .player_character
-                .add_condition_with_duration(*condition, source.clone(), *duration_rounds);
+            world.player_character.add_condition_with_duration(
+                *condition,
+                source.clone(),
+                *duration_rounds,
+            );
         }
         Effect::ConditionRemoved { condition, .. } => {
             world
@@ -3321,7 +3325,12 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
             // Look up item from database for proper stats, fall back to defaults
             match slot.as_str() {
                 "armor" => {
-                    if world.player_character.inventory.find_item(item_name).is_some() {
+                    if world
+                        .player_character
+                        .inventory
+                        .find_item(item_name)
+                        .is_some()
+                    {
                         // Try to get proper armor stats from database
                         let armor = if let Some(db_armor) = crate::items::get_armor(item_name) {
                             db_armor
@@ -3345,7 +3354,12 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
                     }
                 }
                 "main_hand" | "weapon" => {
-                    if world.player_character.inventory.find_item(item_name).is_some() {
+                    if world
+                        .player_character
+                        .inventory
+                        .find_item(item_name)
+                        .is_some()
+                    {
                         // Try to get proper weapon stats from database
                         let weapon = if let Some(db_weapon) = crate::items::get_weapon(item_name) {
                             db_weapon
@@ -3371,31 +3385,29 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
                 _ => {}
             }
         }
-        Effect::ItemUnequipped { slot, .. } => {
-            match slot.as_str() {
-                "armor" => {
-                    if let Some(armor) = world.player_character.equipment.armor.take() {
-                        world.player_character.inventory.add_item(armor.base);
-                    }
+        Effect::ItemUnequipped { slot, .. } => match slot.as_str() {
+            "armor" => {
+                if let Some(armor) = world.player_character.equipment.armor.take() {
+                    world.player_character.inventory.add_item(armor.base);
                 }
-                "shield" => {
-                    if let Some(shield) = world.player_character.equipment.shield.take() {
-                        world.player_character.inventory.add_item(shield);
-                    }
-                }
-                "main_hand" | "weapon" => {
-                    if let Some(weapon) = world.player_character.equipment.main_hand.take() {
-                        world.player_character.inventory.add_item(weapon.base);
-                    }
-                }
-                "off_hand" => {
-                    if let Some(item) = world.player_character.equipment.off_hand.take() {
-                        world.player_character.inventory.add_item(item);
-                    }
-                }
-                _ => {}
             }
-        }
+            "shield" => {
+                if let Some(shield) = world.player_character.equipment.shield.take() {
+                    world.player_character.inventory.add_item(shield);
+                }
+            }
+            "main_hand" | "weapon" => {
+                if let Some(weapon) = world.player_character.equipment.main_hand.take() {
+                    world.player_character.inventory.add_item(weapon.base);
+                }
+            }
+            "off_hand" => {
+                if let Some(item) = world.player_character.equipment.off_hand.take() {
+                    world.player_character.inventory.add_item(item);
+                }
+            }
+            _ => {}
+        },
         // ItemUsed is informational - the actual effects (healing, etc.) are separate effects
         Effect::ItemUsed { .. } => {}
         Effect::GoldChanged { new_total, .. } => {
@@ -3420,7 +3432,9 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
             // For now, we don't modify world state further (could add a `dead: bool` flag)
         }
 
-        Effect::DeathSaveSuccess { total_successes, .. } => {
+        Effect::DeathSaveSuccess {
+            total_successes, ..
+        } => {
             world.player_character.death_saves.successes = *total_successes;
         }
 
@@ -3457,7 +3471,8 @@ pub fn apply_effect(world: &mut GameWorld, effect: &Effect) {
         Effect::RageStarted { damage_bonus, .. } => {
             world.player_character.class_resources.rage_active = true;
             world.player_character.class_resources.rage_damage_bonus = *damage_bonus;
-            world.player_character.class_resources.rage_rounds_remaining = Some(10); // 1 minute = 10 rounds
+            world.player_character.class_resources.rage_rounds_remaining = Some(10);
+            // 1 minute = 10 rounds
         }
         Effect::RageEnded { .. } => {
             world.player_character.class_resources.rage_active = false;
@@ -3556,10 +3571,12 @@ mod tests {
     fn test_healing_removes_unconscious() {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let mut world = GameWorld::new("Test", character);
 
         // Verify character is unconscious
@@ -3749,27 +3766,33 @@ mod tests {
 
         let short_rest = engine.resolve(&world, Intent::ShortRest);
         assert!(!short_rest.effects.is_empty());
-        assert!(short_rest
-            .effects
-            .iter()
-            .any(|e| matches!(e, Effect::RestCompleted { rest_type: RestType::Short })));
+        assert!(short_rest.effects.iter().any(|e| matches!(
+            e,
+            Effect::RestCompleted {
+                rest_type: RestType::Short
+            }
+        )));
 
         let long_rest = engine.resolve(&world, Intent::LongRest);
         assert!(!long_rest.effects.is_empty());
-        assert!(long_rest
-            .effects
-            .iter()
-            .any(|e| matches!(e, Effect::RestCompleted { rest_type: RestType::Long })));
+        assert!(long_rest.effects.iter().any(|e| matches!(
+            e,
+            Effect::RestCompleted {
+                rest_type: RestType::Long
+            }
+        )));
     }
 
     #[test]
     fn test_unconscious_cannot_attack() {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -3792,10 +3815,12 @@ mod tests {
     fn test_unconscious_auto_fails_str_dex_checks() {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -3849,10 +3874,12 @@ mod tests {
     fn test_unconscious_auto_fails_str_dex_saves() {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -3892,10 +3919,12 @@ mod tests {
     fn test_damage_at_zero_hp_causes_death_save_failure() {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -3910,10 +3939,14 @@ mod tests {
         );
 
         // Should have death save failure effect
-        assert!(resolution
-            .effects
-            .iter()
-            .any(|e| matches!(e, Effect::DeathSaveFailure { failures: 1, total_failures: 1, .. })));
+        assert!(resolution.effects.iter().any(|e| matches!(
+            e,
+            Effect::DeathSaveFailure {
+                failures: 1,
+                total_failures: 1,
+                ..
+            }
+        )));
         assert!(resolution.narrative.contains("death save failure"));
     }
 
@@ -3922,10 +3955,12 @@ mod tests {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
         character.hit_points.maximum = 30;
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -3953,10 +3988,12 @@ mod tests {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
         character.death_saves.failures = 2; // 2 failures already
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let mut world = GameWorld::new("Test", character);
 
         // Apply healing effect
@@ -3985,10 +4022,12 @@ mod tests {
         let mut character = create_sample_fighter("Roland");
         character.hit_points.current = 0;
         character.death_saves.failures = 2; // Already have 2 failures
-        character.conditions.push(crate::world::ActiveCondition::new(
-            Condition::Unconscious,
-            "Dropped to 0 HP",
-        ));
+        character
+            .conditions
+            .push(crate::world::ActiveCondition::new(
+                Condition::Unconscious,
+                "Dropped to 0 HP",
+            ));
         let world = GameWorld::new("Test", character.clone());
         let engine = RulesEngine::new();
 
@@ -4004,10 +4043,13 @@ mod tests {
         );
 
         // Should have both death save failure and character died effects
-        assert!(resolution
-            .effects
-            .iter()
-            .any(|e| matches!(e, Effect::DeathSaveFailure { total_failures: 3, .. })));
+        assert!(resolution.effects.iter().any(|e| matches!(
+            e,
+            Effect::DeathSaveFailure {
+                total_failures: 3,
+                ..
+            }
+        )));
         assert!(resolution
             .effects
             .iter()

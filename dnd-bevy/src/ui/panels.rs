@@ -113,9 +113,7 @@ pub fn render_top_bar(ctx: &egui::Context, app_state: &mut AppState) {
             let time = &app_state.world.game_time;
             ui.label(format!(
                 "Day {}, {}:{:02}",
-                time.day,
-                time.hour,
-                time.minute
+                time.day, time.hour, time.minute
             ));
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -123,11 +121,7 @@ pub fn render_top_bar(ctx: &egui::Context, app_state: &mut AppState) {
                 ui.spacing_mut().item_spacing.x = 6.0;
 
                 // Help button
-                if ui
-                    .button("?")
-                    .on_hover_text("Help (F1)")
-                    .clicked()
-                {
+                if ui.button("?").on_hover_text("Help (F1)").clicked() {
                     app_state.toggle_overlay(ActiveOverlay::Help);
                 }
 
@@ -154,8 +148,10 @@ pub fn render_top_bar(ctx: &egui::Context, app_state: &mut AppState) {
                 ui.add_space(4.0);
 
                 // Load button
-                let load_enabled = !app_state.is_loading && !app_state.is_processing && app_state.has_session();
-                let autosave_path = dnd_core::persist::auto_save_path("saves", &app_state.world.campaign_name);
+                let load_enabled =
+                    !app_state.is_loading && !app_state.is_processing && app_state.has_session();
+                let autosave_path =
+                    dnd_core::persist::auto_save_path("saves", &app_state.world.campaign_name);
                 let autosave_exists = autosave_path.exists();
                 if ui
                     .add_enabled(load_enabled && autosave_exists, egui::Button::new("Load"))
@@ -174,14 +170,18 @@ pub fn render_top_bar(ctx: &egui::Context, app_state: &mut AppState) {
                 }
 
                 // Save button
-                let save_enabled = !app_state.is_saving && !app_state.is_processing && app_state.has_session();
+                let save_enabled =
+                    !app_state.is_saving && !app_state.is_processing && app_state.has_session();
                 if ui
                     .add_enabled(save_enabled, egui::Button::new("Save"))
                     .on_hover_text("Save game (Ctrl+S)")
                     .clicked()
                 {
                     if let Some(tx) = &app_state.request_tx {
-                        let path = dnd_core::persist::auto_save_path("saves", &app_state.world.campaign_name);
+                        let path = dnd_core::persist::auto_save_path(
+                            "saves",
+                            &app_state.world.campaign_name,
+                        );
                         let _ = tx.try_send(WorkerRequest::Save(path));
                         app_state.is_saving = true;
                         app_state.set_status_persistent("Saving...");
@@ -236,7 +236,7 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
                         NarrativeType::DmNarration => egui::Color32::from_rgb(230, 220, 200), // Parchment
                         NarrativeType::PlayerAction => egui::Color32::from_rgb(100, 180, 255), // Blue
                         NarrativeType::NpcDialogue => egui::Color32::from_rgb(200, 200, 150), // Tan
-                        NarrativeType::Combat => egui::Color32::from_rgb(255, 100, 100), // Red
+                        NarrativeType::Combat => egui::Color32::from_rgb(255, 100, 100),      // Red
                         NarrativeType::System => egui::Color32::from_rgb(180, 180, 180), // Gray
                     };
 
@@ -259,10 +259,7 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
                             let text = paragraph.trim();
                             if !text.is_empty() {
                                 ui.add(
-                                    egui::Label::new(
-                                        egui::RichText::new(text).color(color),
-                                    )
-                                    .wrap(),
+                                    egui::Label::new(egui::RichText::new(text).color(color)).wrap(),
                                 );
                                 // Add space between paragraphs
                                 if i < paragraphs.len() - 1 {
@@ -277,10 +274,7 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
                             let text = line.trim();
                             if !text.is_empty() {
                                 ui.add(
-                                    egui::Label::new(
-                                        egui::RichText::new(text).color(color),
-                                    )
-                                    .wrap(),
+                                    egui::Label::new(egui::RichText::new(text).color(color)).wrap(),
                                 );
                                 if i < lines.len() - 1 {
                                     ui.add_space(4.0);
@@ -305,15 +299,14 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
 
                     // Check if there are double newlines (proper paragraphs)
                     if app_state.streaming_text.contains("\n\n") {
-                        let paragraphs: Vec<&str> = app_state.streaming_text.split("\n\n").collect();
+                        let paragraphs: Vec<&str> =
+                            app_state.streaming_text.split("\n\n").collect();
                         for (i, paragraph) in paragraphs.iter().enumerate() {
                             let text = paragraph.trim();
                             if !text.is_empty() {
                                 ui.add(
                                     egui::Label::new(
-                                        egui::RichText::new(text)
-                                            .color(streaming_color)
-                                            .italics(),
+                                        egui::RichText::new(text).color(streaming_color).italics(),
                                     )
                                     .wrap(),
                                 );
@@ -329,9 +322,7 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
                             if !text.is_empty() {
                                 ui.add(
                                     egui::Label::new(
-                                        egui::RichText::new(text)
-                                            .color(streaming_color)
-                                            .italics(),
+                                        egui::RichText::new(text).color(streaming_color).italics(),
                                     )
                                     .wrap(),
                                 );
@@ -362,7 +353,11 @@ pub fn render_narrative_panel(ctx: &egui::Context, app_state: &AppState, _curren
 
 /// Render the character panel (right sidebar).
 pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
-    let panel_width = if app_state.character_panel_expanded { 220.0 } else { 120.0 };
+    let panel_width = if app_state.character_panel_expanded {
+        220.0
+    } else {
+        120.0
+    };
 
     egui::SidePanel::right("character_panel")
         .min_width(panel_width)
@@ -379,7 +374,11 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     // Collapse/expand button
-                    let button_text = if app_state.character_panel_expanded { "−" } else { "+" };
+                    let button_text = if app_state.character_panel_expanded {
+                        "−"
+                    } else {
+                        "+"
+                    };
                     if ui
                         .small_button(button_text)
                         .on_hover_text(if app_state.character_panel_expanded {
@@ -432,13 +431,21 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
                     ui.label("Death Saves: ");
                     for i in 0..3 {
                         let filled = i < saves.successes;
-                        let color = if filled { egui::Color32::from_rgb(34, 139, 34) } else { egui::Color32::DARK_GRAY };
+                        let color = if filled {
+                            egui::Color32::from_rgb(34, 139, 34)
+                        } else {
+                            egui::Color32::DARK_GRAY
+                        };
                         ui.colored_label(color, if filled { "[X]" } else { "[ ]" });
                     }
                     ui.label("/");
                     for i in 0..3 {
                         let filled = i < saves.failures;
-                        let color = if filled { egui::Color32::RED } else { egui::Color32::DARK_GRAY };
+                        let color = if filled {
+                            egui::Color32::RED
+                        } else {
+                            egui::Color32::DARK_GRAY
+                        };
                         ui.colored_label(color, if filled { "[X]" } else { "[ ]" });
                     }
                 });
@@ -453,7 +460,14 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
                 ui.separator();
                 ui.label("Init:");
                 let init = app_state.world.player_initiative;
-                ui.label(egui::RichText::new(if init >= 0 { format!("+{init}") } else { format!("{init}") }).strong());
+                ui.label(
+                    egui::RichText::new(if init >= 0 {
+                        format!("+{init}")
+                    } else {
+                        format!("{init}")
+                    })
+                    .strong(),
+                );
             });
 
             ui.horizontal(|ui| {
@@ -464,7 +478,11 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
             // Conditions
             if !app_state.world.conditions.is_empty() {
                 ui.separator();
-                ui.label(egui::RichText::new("Conditions").color(egui::Color32::YELLOW).strong());
+                ui.label(
+                    egui::RichText::new("Conditions")
+                        .color(egui::Color32::YELLOW)
+                        .strong(),
+                );
                 for condition in &app_state.world.conditions {
                     ui.label(format!("  {condition}"));
                 }
@@ -484,13 +502,20 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
             }
 
             // Spell Slots (if spellcaster)
-            let has_spell_slots = app_state.world.spell_slots.iter().any(|(_, total)| *total > 0);
+            let has_spell_slots = app_state
+                .world
+                .spell_slots
+                .iter()
+                .any(|(_, total)| *total > 0);
             if has_spell_slots || !app_state.world.cantrips.is_empty() {
                 ui.separator();
                 ui.label(egui::RichText::new("Spellcasting").strong());
 
                 // Show spell save DC and attack bonus
-                if let (Some(dc), Some(atk)) = (app_state.world.spell_save_dc, app_state.world.spell_attack_bonus) {
+                if let (Some(dc), Some(atk)) = (
+                    app_state.world.spell_save_dc,
+                    app_state.world.spell_attack_bonus,
+                ) {
                     ui.horizontal(|ui| {
                         ui.label(format!("DC {} | ", dc));
                         ui.label(format!("+{} atk", atk));
@@ -501,7 +526,9 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
                 if has_spell_slots {
                     ui.horizontal_wrapped(|ui| {
                         ui.label("Slots: ");
-                        for (i, (available, total)) in app_state.world.spell_slots.iter().enumerate() {
+                        for (i, (available, total)) in
+                            app_state.world.spell_slots.iter().enumerate()
+                        {
                             if *total > 0 {
                                 let level = i + 1;
                                 let color = if *available > 0 {
@@ -510,9 +537,12 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
                                     egui::Color32::GRAY
                                 };
                                 ui.label(
-                                    egui::RichText::new(format!("L{}: {}/{}", level, available, total))
-                                        .color(color)
-                                        .small(),
+                                    egui::RichText::new(format!(
+                                        "L{}: {}/{}",
+                                        level, available, total
+                                    ))
+                                    .color(color)
+                                    .small(),
                                 );
                             }
                         }
@@ -522,9 +552,12 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
                 // Cantrips count
                 if !app_state.world.cantrips.is_empty() {
                     ui.label(
-                        egui::RichText::new(format!("  {} cantrips", app_state.world.cantrips.len()))
-                            .small()
-                            .color(egui::Color32::LIGHT_GRAY),
+                        egui::RichText::new(format!(
+                            "  {} cantrips",
+                            app_state.world.cantrips.len()
+                        ))
+                        .small()
+                        .color(egui::Color32::LIGHT_GRAY),
                     );
                 }
             }
@@ -544,23 +577,33 @@ pub fn render_character_panel(ctx: &egui::Context, app_state: &mut AppState) {
             ui.separator();
             ui.collapsing("Inventory", |ui| {
                 if app_state.world.inventory_items.is_empty() {
-                    ui.label(egui::RichText::new("Empty").italics().color(egui::Color32::GRAY));
+                    ui.label(
+                        egui::RichText::new("Empty")
+                            .italics()
+                            .color(egui::Color32::GRAY),
+                    );
                 } else {
-                    egui::ScrollArea::vertical().max_height(150.0).show(ui, |ui| {
-                        for item in &app_state.world.inventory_items {
-                            let name = if item.quantity > 1 {
-                                format!("{} (x{})", item.name, item.quantity)
-                            } else {
-                                item.name.clone()
-                            };
-                            let color = if item.magical {
-                                egui::Color32::from_rgb(138, 43, 226)
-                            } else {
-                                egui::Color32::LIGHT_GRAY
-                            };
-                            ui.label(egui::RichText::new(format!("• {name}")).color(color).small());
-                        }
-                    });
+                    egui::ScrollArea::vertical()
+                        .max_height(150.0)
+                        .show(ui, |ui| {
+                            for item in &app_state.world.inventory_items {
+                                let name = if item.quantity > 1 {
+                                    format!("{} (x{})", item.name, item.quantity)
+                                } else {
+                                    item.name.clone()
+                                };
+                                let color = if item.magical {
+                                    egui::Color32::from_rgb(138, 43, 226)
+                                } else {
+                                    egui::Color32::LIGHT_GRAY
+                                };
+                                ui.label(
+                                    egui::RichText::new(format!("• {name}"))
+                                        .color(color)
+                                        .small(),
+                                );
+                            }
+                        });
                 }
             });
         });
@@ -655,10 +698,7 @@ pub fn render_game_over(
 
             ui.add_space(20.0);
 
-            ui.label(format!(
-                "{} has fallen.",
-                app_state.world.player_name
-            ));
+            ui.label(format!("{} has fallen.", app_state.world.player_name));
 
             ui.add_space(40.0);
 

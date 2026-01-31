@@ -411,7 +411,10 @@ impl DungeonMaster {
                             });
                         }
                     }
-                    StreamEvent::InputJsonDelta { index, partial_json } => {
+                    StreamEvent::InputJsonDelta {
+                        index,
+                        partial_json,
+                    } => {
                         // Accumulate JSON for the current tool use
                         if let Some(current_idx) = current_tool_index {
                             if index == current_idx {
@@ -900,7 +903,11 @@ impl DungeonMaster {
 
         let checker = RelevanceChecker::new(self.client.clone());
         let result = checker
-            .check_relevance(player_input, &world.current_location.name, &self.story_memory)
+            .check_relevance(
+                player_input,
+                &world.current_location.name,
+                &self.story_memory,
+            )
             .await
             .map_err(|e| DmError::ToolError(format!("Relevance check failed: {e}")))?;
 
@@ -922,7 +929,8 @@ impl DungeonMaster {
 
         let mut context = String::new();
         context.push_str("\n## TRIGGERED CONSEQUENCES - ACT ON THESE!\n");
-        context.push_str("The following consequences have been triggered by the player's action:\n\n");
+        context
+            .push_str("The following consequences have been triggered by the player's action:\n\n");
 
         for id in &results.triggered_consequences {
             if let Some(consequence) = self.story_memory.get_consequence(*id) {
@@ -964,8 +972,8 @@ mod tests {
             subclass: None,
         });
         let mut world = GameWorld::new("Test Campaign", character);
-        world.current_location = Location::new("Test Location", LocationType::Town)
-            .with_description("A test location");
+        world.current_location =
+            Location::new("Test Location", LocationType::Town).with_description("A test location");
         world
     }
 

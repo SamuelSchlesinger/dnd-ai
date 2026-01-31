@@ -500,7 +500,11 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            DiceError::InvalidKeepCount { keep: 5, count: 4, .. }
+            DiceError::InvalidKeepCount {
+                keep: 5,
+                count: 4,
+                ..
+            }
         ));
 
         // Keep lowest also validates

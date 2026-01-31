@@ -8,6 +8,5 @@ use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 
 /// Global shared tokio runtime for all async operations.
-pub static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
-    Runtime::new().expect("Failed to create tokio runtime")
-});
+pub static RUNTIME: Lazy<Runtime> =
+    Lazy::new(|| Runtime::new().expect("Failed to create tokio runtime"));

@@ -106,10 +106,7 @@ pub fn spawn_dice_animation(
 }
 
 /// System to animate dice rolls.
-pub fn animate_dice(
-    time: Res<Time>,
-    mut query: Query<&mut DiceAnimation>,
-) {
+pub fn animate_dice(time: Res<Time>, mut query: Query<&mut DiceAnimation>) {
     let mut rng = rand::thread_rng();
 
     for mut dice in query.iter_mut() {

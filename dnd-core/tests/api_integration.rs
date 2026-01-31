@@ -133,9 +133,7 @@ fn create_sample_cleric(name: &str) -> Character {
     character.hit_points.maximum = 24;
     character.hit_points.current = 24;
 
-    character
-        .saving_throw_proficiencies
-        .insert(Ability::Wisdom);
+    character.saving_throw_proficiencies.insert(Ability::Wisdom);
     character
         .saving_throw_proficiencies
         .insert(Ability::Charisma);
@@ -228,7 +226,10 @@ async fn test_dm_registers_consequence_on_hostile_action() {
         .expect("DM should respond");
 
     // Check if the DM's response is reasonable
-    assert!(!response.narrative.is_empty(), "DM should provide a narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide a narrative"
+    );
 
     // The DM may or may not register a consequence on the first action,
     // but let's at least verify the system works
@@ -258,10 +259,8 @@ async fn test_relevance_checker_with_real_api() {
     let mut story_memory = StoryMemory::new();
 
     // Add a location entity
-    let riverside_id = story_memory.create_entity(
-        dnd_core::dm::EntityType::Location,
-        "Riverside Village",
-    );
+    let riverside_id =
+        story_memory.create_entity(dnd_core::dm::EntityType::Location, "Riverside Village");
 
     // Add a consequence about entering the village
     let consequence = dnd_core::dm::Consequence::new(
@@ -288,7 +287,10 @@ async fn test_relevance_checker_with_real_api() {
         .expect("Relevance check should succeed");
 
     println!("Relevance result: {:?}", result);
-    println!("Triggered consequences: {:?}", result.triggered_consequences);
+    println!(
+        "Triggered consequences: {:?}",
+        result.triggered_consequences
+    );
     println!("Explanation: {:?}", result.explanation);
 
     // The Haiku model should recognize this triggers the "enters village" consequence
@@ -469,7 +471,10 @@ async fn test_dm_handles_cantrip_casting() {
     );
 
     // Response should mention fire/damage or the spell
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 #[tokio::test]
@@ -529,12 +534,13 @@ async fn test_dm_handles_leveled_spell_casting() {
     if final_1st_level_used > initial_1st_level_used {
         println!("SUCCESS: Spell slot was consumed!");
     } else {
-        println!(
-            "NOTE: Spell slot was not consumed - DM may have described casting differently"
-        );
+        println!("NOTE: Spell slot was not consumed - DM may have described casting differently");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 #[tokio::test]
@@ -561,7 +567,10 @@ async fn test_dm_handles_healing_spell() {
     });
 
     let initial_hp = world.player_character.hit_points.current;
-    println!("Initial HP: {}/{}", initial_hp, world.player_character.hit_points.maximum);
+    println!(
+        "Initial HP: {}/{}",
+        initial_hp, world.player_character.hit_points.maximum
+    );
 
     // Cast Cure Wounds on self
     let response = dm
@@ -574,16 +583,25 @@ async fn test_dm_handles_healing_spell() {
     println!("Effects: {:?}", response.effects);
 
     let final_hp = world.player_character.hit_points.current;
-    println!("Final HP: {}/{}", final_hp, world.player_character.hit_points.maximum);
+    println!(
+        "Final HP: {}/{}",
+        final_hp, world.player_character.hit_points.maximum
+    );
 
     // HP should have increased (or stayed same if at max)
     if final_hp > initial_hp {
-        println!("SUCCESS: Character was healed from {} to {} HP!", initial_hp, final_hp);
+        println!(
+            "SUCCESS: Character was healed from {} to {} HP!",
+            initial_hp, final_hp
+        );
     } else {
         println!("NOTE: HP did not increase - DM may have handled healing differently");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 // =============================================================================
@@ -637,7 +655,10 @@ async fn test_dm_handles_barbarian_rage() {
     }
 
     // Response should acknowledge the rage
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 #[tokio::test]
@@ -691,7 +712,10 @@ async fn test_dm_handles_fighter_action_surge() {
         println!("NOTE: Action Surge not tracked - DM may have handled it narratively");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 // =============================================================================
@@ -731,9 +755,10 @@ async fn test_dm_handles_attack_roll() {
     println!("Effects: {:?}", response.effects);
 
     // Check if an attack intent was generated
-    let has_attack_intent = response.intents.iter().any(|i| {
-        matches!(i, dnd_core::rules::Intent::Attack { .. })
-    });
+    let has_attack_intent = response
+        .intents
+        .iter()
+        .any(|i| matches!(i, dnd_core::rules::Intent::Attack { .. }));
 
     if has_attack_intent {
         println!("SUCCESS: Attack intent was generated!");
@@ -742,15 +767,19 @@ async fn test_dm_handles_attack_roll() {
     }
 
     // Check if damage was dealt (HP changed with negative amount)
-    let has_damage_effect = response.effects.iter().any(|e| {
-        matches!(e, dnd_core::rules::Effect::HpChanged { amount, .. } if *amount < 0)
-    });
+    let has_damage_effect = response
+        .effects
+        .iter()
+        .any(|e| matches!(e, dnd_core::rules::Effect::HpChanged { amount, .. } if *amount < 0));
 
     if has_damage_effect {
         println!("SUCCESS: Damage effect was generated!");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 #[tokio::test]
@@ -775,7 +804,10 @@ async fn test_dm_handles_skill_check() {
 
     // Request something that should trigger a skill check
     let response = dm
-        .process_input("I carefully search the room for hidden doors or traps", &mut world)
+        .process_input(
+            "I carefully search the room for hidden doors or traps",
+            &mut world,
+        )
         .await
         .expect("DM should respond");
 
@@ -796,7 +828,10 @@ async fn test_dm_handles_skill_check() {
         println!("SUCCESS: Skill check intent was generated!");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 // =============================================================================
@@ -865,7 +900,10 @@ async fn test_dm_handles_short_rest() {
         println!("SUCCESS: Second Wind was recovered!");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 #[tokio::test]
@@ -948,7 +986,10 @@ async fn test_dm_handles_long_rest_spell_recovery() {
         println!("SUCCESS: HP was fully restored!");
     }
 
-    assert!(!response.narrative.is_empty(), "DM should provide narrative");
+    assert!(
+        !response.narrative.is_empty(),
+        "DM should provide narrative"
+    );
 }
 
 // =============================================================================
@@ -977,7 +1018,10 @@ async fn test_dm_remembers_context_across_turns() {
 
     // First turn - establish context
     let response1 = dm
-        .process_input("I introduce myself to the innkeeper as Sage the Wise", &mut world)
+        .process_input(
+            "I introduce myself to the innkeeper as Sage the Wise",
+            &mut world,
+        )
         .await
         .expect("DM should respond");
 
@@ -993,7 +1037,10 @@ async fn test_dm_remembers_context_across_turns() {
 
     // Third turn - use a spell
     let response3 = dm
-        .process_input("I thank the innkeeper and cast Light on my staff", &mut world)
+        .process_input(
+            "I thank the innkeeper and cast Light on my staff",
+            &mut world,
+        )
         .await
         .expect("DM should respond");
 

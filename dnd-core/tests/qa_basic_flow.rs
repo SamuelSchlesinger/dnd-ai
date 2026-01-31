@@ -194,7 +194,9 @@ async fn test_look_around_command() {
     println!("\n=== Testing 'look around' Command ===\n");
 
     let config = HeadlessConfig::quick_start("Explorer");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     let response = game.send("I look around").await;
 
@@ -203,10 +205,19 @@ async fn test_look_around_command() {
             println!("SUCCESS: Got response for 'look around'");
             println!("  Narrative length: {} chars", response.narrative.len());
             println!("  In combat: {}", response.in_combat);
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(200)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(200)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
-            assert!(!response.in_combat, "Should not be in combat from looking around");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
+            assert!(
+                !response.in_combat,
+                "Should not be in combat from looking around"
+            );
         }
         Err(e) => {
             panic!("FAILED: Error on 'look around': {:?}", e);
@@ -226,7 +237,9 @@ async fn test_examine_command() {
     println!("\n=== Testing 'examine' Command ===\n");
 
     let config = HeadlessConfig::quick_start("Inspector");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // First look around to establish context
     let _ = game.send("I look around the room").await;
@@ -238,9 +251,15 @@ async fn test_examine_command() {
         Ok(response) => {
             println!("SUCCESS: Got response for 'examine'");
             println!("  Narrative length: {} chars", response.narrative.len());
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(200)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(200)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
         }
         Err(e) => {
             panic!("FAILED: Error on 'examine': {:?}", e);
@@ -259,9 +278,11 @@ async fn test_move_command() {
 
     println!("\n=== Testing Movement Command ===\n");
 
-    let config = HeadlessConfig::quick_start("Wanderer")
-        .with_starting_location("The Crossroads Inn");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let config =
+        HeadlessConfig::quick_start("Wanderer").with_starting_location("The Crossroads Inn");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     let initial_location = game.current_location().to_string();
     println!("  Initial location: {}", initial_location);
@@ -274,9 +295,15 @@ async fn test_move_command() {
             println!("SUCCESS: Got response for movement");
             println!("  Narrative length: {} chars", response.narrative.len());
             println!("  Current location after move: {}", game.current_location());
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(200)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(200)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
             // Note: Location may or may not change depending on DM interpretation
         }
         Err(e) => {
@@ -297,17 +324,27 @@ async fn test_search_command() {
     println!("\n=== Testing 'search' Command ===\n");
 
     let config = HeadlessConfig::quick_start("Searcher");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
-    let response = game.send("I carefully search the area for hidden objects or secret doors").await;
+    let response = game
+        .send("I carefully search the area for hidden objects or secret doors")
+        .await;
 
     match response {
         Ok(response) => {
             println!("SUCCESS: Got response for 'search'");
             println!("  Narrative length: {} chars", response.narrative.len());
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(200)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(200)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
             // Search often triggers a skill check - the DM should handle this
         }
         Err(e) => {
@@ -331,23 +368,35 @@ async fn test_npc_dialogue_greeting() {
 
     println!("\n=== Testing NPC Dialogue (Greeting) ===\n");
 
-    let config = HeadlessConfig::quick_start("Diplomat")
-        .with_starting_location("The Crossroads Inn");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let config =
+        HeadlessConfig::quick_start("Diplomat").with_starting_location("The Crossroads Inn");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // First establish there's someone to talk to
-    let _ = game.send("I look around the inn for someone to talk to").await;
+    let _ = game
+        .send("I look around the inn for someone to talk to")
+        .await;
 
     // Then try to initiate dialogue
-    let response = game.send("I approach the innkeeper and say 'Good day! What news do you have?'").await;
+    let response = game
+        .send("I approach the innkeeper and say 'Good day! What news do you have?'")
+        .await;
 
     match response {
         Ok(response) => {
             println!("SUCCESS: Got NPC dialogue response");
             println!("  Narrative length: {} chars", response.narrative.len());
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(300)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(300)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
         }
         Err(e) => {
             panic!("FAILED: Error on NPC dialogue: {:?}", e);
@@ -366,20 +415,30 @@ async fn test_npc_dialogue_question() {
 
     println!("\n=== Testing NPC Dialogue (Question) ===\n");
 
-    let config = HeadlessConfig::quick_start("Questioner")
-        .with_starting_location("The Market Square");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let config =
+        HeadlessConfig::quick_start("Questioner").with_starting_location("The Market Square");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Try to get information from an NPC
-    let response = game.send("I find a merchant and ask them about any rumors of adventure or danger in the area").await;
+    let response = game
+        .send("I find a merchant and ask them about any rumors of adventure or danger in the area")
+        .await;
 
     match response {
         Ok(response) => {
             println!("SUCCESS: Got response to NPC question");
             println!("  Narrative length: {} chars", response.narrative.len());
-            println!("  Narrative preview: {}...", &response.narrative[..response.narrative.len().min(300)]);
+            println!(
+                "  Narrative preview: {}...",
+                &response.narrative[..response.narrative.len().min(300)]
+            );
 
-            assert!(!response.narrative.is_empty(), "Narrative should not be empty");
+            assert!(
+                !response.narrative.is_empty(),
+                "Narrative should not be empty"
+            );
         }
         Err(e) => {
             panic!("FAILED: Error on NPC question: {:?}", e);
@@ -408,7 +467,9 @@ async fn test_state_queries_after_gameplay() {
         CharacterClass::Fighter,
         Background::Soldier,
     );
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Record initial state
     let initial_hp = game.current_hp();
@@ -445,7 +506,10 @@ async fn test_state_queries_after_gameplay() {
 
     // Check last response
     if let Some(last) = game.last_response() {
-        println!("  Last response preview: {}...", &last[..last.len().min(100)]);
+        println!(
+            "  Last response preview: {}...",
+            &last[..last.len().min(100)]
+        );
     }
 }
 
@@ -461,7 +525,9 @@ async fn test_hp_tracking() {
     println!("\n=== Testing HP Tracking ===\n");
 
     let config = HeadlessConfig::quick_start("HPTest");
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     let initial_hp = game.current_hp();
     let max_hp = game.max_hp();
@@ -473,10 +539,16 @@ async fn test_hp_tracking() {
     assert!(initial_hp <= max_hp, "Current HP should not exceed max HP");
 
     // HP should be reported in game response too
-    let response = game.send("I check my health").await.expect("Should get response");
+    let response = game
+        .send("I check my health")
+        .await
+        .expect("Should get response");
     println!("Response HP: {}/{}", response.current_hp, response.max_hp);
 
-    assert_eq!(response.max_hp, max_hp, "Response max HP should match game state");
+    assert_eq!(
+        response.max_hp, max_hp,
+        "Response max HP should match game state"
+    );
 }
 
 // =============================================================================
@@ -502,9 +574,12 @@ async fn test_multi_turn_game_flow() {
     )
     .with_starting_location("The Rusty Dragon Inn");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
-    println!("Character: {} the {} {}",
+    println!(
+        "Character: {} the {} {}",
         game.player_name(),
         game.player_background(),
         game.player_class().unwrap_or("Unknown")
@@ -514,10 +589,15 @@ async fn test_multi_turn_game_flow() {
 
     // Turn 1: Look around
     println!("--- Turn 1: Looking around ---");
-    let r1 = game.send("I look around the inn, taking in the atmosphere").await;
+    let r1 = game
+        .send("I look around the inn, taking in the atmosphere")
+        .await;
     match r1 {
         Ok(response) => {
-            println!("Response: {}...", &response.narrative[..response.narrative.len().min(150)]);
+            println!(
+                "Response: {}...",
+                &response.narrative[..response.narrative.len().min(150)]
+            );
             println!();
         }
         Err(e) => {
@@ -527,10 +607,15 @@ async fn test_multi_turn_game_flow() {
 
     // Turn 2: Social interaction
     println!("--- Turn 2: Social interaction ---");
-    let r2 = game.send("I introduce myself to anyone nearby with a theatrical bow").await;
+    let r2 = game
+        .send("I introduce myself to anyone nearby with a theatrical bow")
+        .await;
     match r2 {
         Ok(response) => {
-            println!("Response: {}...", &response.narrative[..response.narrative.len().min(150)]);
+            println!(
+                "Response: {}...",
+                &response.narrative[..response.narrative.len().min(150)]
+            );
             println!();
         }
         Err(e) => {
@@ -540,10 +625,15 @@ async fn test_multi_turn_game_flow() {
 
     // Turn 3: Gather information
     println!("--- Turn 3: Gathering information ---");
-    let r3 = game.send("I ask if anyone knows of opportunities for a traveling performer").await;
+    let r3 = game
+        .send("I ask if anyone knows of opportunities for a traveling performer")
+        .await;
     match r3 {
         Ok(response) => {
-            println!("Response: {}...", &response.narrative[..response.narrative.len().min(150)]);
+            println!(
+                "Response: {}...",
+                &response.narrative[..response.narrative.len().min(150)]
+            );
             println!();
         }
         Err(e) => {
@@ -559,7 +649,10 @@ async fn test_multi_turn_game_flow() {
     println!("HP: {}/{}", game.current_hp(), game.max_hp());
 
     assert_eq!(transcript.len(), 3, "Should have 3 turns in transcript");
-    assert!(!game.in_combat(), "Should not be in combat after social interactions");
+    assert!(
+        !game.in_combat(),
+        "Should not be in combat after social interactions"
+    );
 
     println!("\nSUCCESS: Multi-turn flow completed without errors");
 }
@@ -598,12 +691,7 @@ async fn test_all_character_classes() {
     let mut failures = Vec::new();
 
     for (class, name) in classes {
-        let config = HeadlessConfig::custom(
-            name,
-            RaceType::Human,
-            class,
-            Background::FolkHero,
-        );
+        let config = HeadlessConfig::custom(name, RaceType::Human, class, Background::FolkHero);
 
         match HeadlessGame::new(config).await {
             Ok(game) => {
@@ -612,7 +700,12 @@ async fn test_all_character_classes() {
                     println!("  [OK] {} - {}", class.name(), name);
                     successes += 1;
                 } else {
-                    println!("  [MISMATCH] {} - Expected {}, got {}", name, class.name(), actual_class);
+                    println!(
+                        "  [MISMATCH] {} - Expected {}, got {}",
+                        name,
+                        class.name(),
+                        actual_class
+                    );
                     failures.push(format!("{}: class mismatch", class.name()));
                 }
             }
@@ -666,12 +759,8 @@ async fn test_all_races() {
     let mut failures = Vec::new();
 
     for (race, name) in races {
-        let config = HeadlessConfig::custom(
-            name,
-            race,
-            CharacterClass::Fighter,
-            Background::Soldier,
-        );
+        let config =
+            HeadlessConfig::custom(name, race, CharacterClass::Fighter, Background::Soldier);
 
         match HeadlessGame::new(config).await {
             Ok(game) => {

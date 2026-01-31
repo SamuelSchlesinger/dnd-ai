@@ -49,16 +49,16 @@ fn main() {
         // Startup systems
         .add_systems(Startup, setup)
         // State transition systems
-        .add_systems(OnEnter(GamePhase::CharacterCreation), setup_character_creation)
-        .add_systems(OnExit(GamePhase::CharacterCreation), cleanup_character_creation)
-        // Update systems - UI
         .add_systems(
-            Update,
-            (
-                ui::main_ui_system,
-                ui::handle_keyboard_input,
-            ),
+            OnEnter(GamePhase::CharacterCreation),
+            setup_character_creation,
         )
+        .add_systems(
+            OnExit(GamePhase::CharacterCreation),
+            cleanup_character_creation,
+        )
+        // Update systems - UI
+        .add_systems(Update, (ui::main_ui_system, ui::handle_keyboard_input))
         // Update systems - animations
         .add_systems(
             Update,
@@ -70,15 +70,18 @@ fn main() {
             ),
         )
         // Update systems - AI worker and session management
-        .add_systems(Update, (
-            state::handle_worker_responses,
-            state::check_pending_session,
-            state::check_pending_character_list,
-            state::check_pending_game_list,
-            state::check_pending_game_load,
-            state::clear_old_status,
-            handle_ready_to_start,
-        ))
+        .add_systems(
+            Update,
+            (
+                state::handle_worker_responses,
+                state::check_pending_session,
+                state::check_pending_character_list,
+                state::check_pending_game_list,
+                state::check_pending_game_load,
+                state::clear_old_status,
+                handle_ready_to_start,
+            ),
+        )
         .run();
 }
 
@@ -115,17 +118,18 @@ fn handle_ready_to_start(
     // Spawn async session creation
     std::thread::spawn(move || {
         let result = crate::runtime::RUNTIME.block_on(async {
-            let config = SessionConfig::new(&campaign_name)
-                .with_character_name(&character.name);
+            let config = SessionConfig::new(&campaign_name).with_character_name(&character.name);
 
-            GameSession::new_with_character(config, character).await.map_err(|e| e.to_string())
+            GameSession::new_with_character(config, character)
+                .await
+                .map_err(|e| e.to_string())
         });
         let _ = tx.send(result);
     });
 
     // Store the pending session receiver
     commands.insert_resource(PendingSession {
-        receiver: std::sync::Mutex::new(rx)
+        receiver: std::sync::Mutex::new(rx),
     });
 
     // Remove ReadyToStart

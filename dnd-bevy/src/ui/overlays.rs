@@ -174,7 +174,9 @@ pub fn render_character_sheet(ctx: &egui::Context, app_state: &mut AppState) {
 
                 columns[0].horizontal(|ui| {
                     ui.label("Armor Class:");
-                    ui.label(egui::RichText::new(format!("{}", app_state.world.player_ac)).strong());
+                    ui.label(
+                        egui::RichText::new(format!("{}", app_state.world.player_ac)).strong(),
+                    );
                 });
 
                 columns[0].horizontal(|ui| {
@@ -257,7 +259,9 @@ pub fn render_character_sheet(ctx: &egui::Context, app_state: &mut AppState) {
                     ui.add_space(4.0);
                     ui.label(egui::RichText::new("Spell Slots").strong());
                     ui.horizontal_wrapped(|ui| {
-                        for (i, (available, total)) in app_state.world.spell_slots.iter().enumerate() {
+                        for (i, (available, total)) in
+                            app_state.world.spell_slots.iter().enumerate()
+                        {
                             if *total > 0 {
                                 let level = i + 1;
                                 let color = if *available > 0 {
@@ -266,8 +270,11 @@ pub fn render_character_sheet(ctx: &egui::Context, app_state: &mut AppState) {
                                     egui::Color32::DARK_GRAY
                                 };
                                 ui.label(
-                                    egui::RichText::new(format!("Lv{}: {}/{}", level, available, total))
-                                        .color(color),
+                                    egui::RichText::new(format!(
+                                        "Lv{}: {}/{}",
+                                        level, available, total
+                                    ))
+                                    .color(color),
                                 );
                                 ui.add_space(8.0);
                             }
@@ -280,7 +287,11 @@ pub fn render_character_sheet(ctx: &egui::Context, app_state: &mut AppState) {
                     ui.add_space(4.0);
                     let cantrips = app_state.world.cantrips.clone();
                     ui.collapsing(
-                        egui::RichText::new(format!("Cantrips ({}) - click for details", cantrips.len())).strong(),
+                        egui::RichText::new(format!(
+                            "Cantrips ({}) - click for details",
+                            cantrips.len()
+                        ))
+                        .strong(),
                         |ui| {
                             for cantrip in &cantrips {
                                 if ui.small_button(format!("• {}", cantrip)).clicked() {
@@ -296,15 +307,21 @@ pub fn render_character_sheet(ctx: &egui::Context, app_state: &mut AppState) {
                     ui.add_space(4.0);
                     let spells = app_state.world.known_spells.clone();
                     ui.collapsing(
-                        egui::RichText::new(format!("Spells ({}) - click for details", spells.len())).strong(),
+                        egui::RichText::new(format!(
+                            "Spells ({}) - click for details",
+                            spells.len()
+                        ))
+                        .strong(),
                         |ui| {
-                            egui::ScrollArea::vertical().max_height(150.0).show(ui, |ui| {
-                                for spell in &spells {
-                                    if ui.small_button(format!("• {}", spell)).clicked() {
-                                        app_state.viewing_spell = Some(spell.clone());
+                            egui::ScrollArea::vertical()
+                                .max_height(150.0)
+                                .show(ui, |ui| {
+                                    for spell in &spells {
+                                        if ui.small_button(format!("• {}", spell)).clicked() {
+                                            app_state.viewing_spell = Some(spell.clone());
+                                        }
                                     }
-                                }
-                            });
+                                });
                         },
                     );
                 }
@@ -369,10 +386,7 @@ pub fn render_quest_log(ctx: &egui::Context, app_state: &AppState) {
                     .collect();
 
                 if !active_quests.is_empty() {
-                    ui.heading(
-                        egui::RichText::new("Active Quests")
-                            .color(egui::Color32::YELLOW),
-                    );
+                    ui.heading(egui::RichText::new("Active Quests").color(egui::Color32::YELLOW));
                     ui.separator();
 
                     for quest in active_quests {
@@ -391,8 +405,11 @@ pub fn render_quest_log(ctx: &egui::Context, app_state: &AppState) {
                                         egui::Color32::WHITE
                                     };
                                     ui.label(
-                                        egui::RichText::new(format!("{} {}", marker, obj.description))
-                                            .color(color),
+                                        egui::RichText::new(format!(
+                                            "{} {}",
+                                            marker, obj.description
+                                        ))
+                                        .color(color),
                                     );
                                 }
                             }
@@ -411,10 +428,7 @@ pub fn render_quest_log(ctx: &egui::Context, app_state: &AppState) {
 
                 if !completed_quests.is_empty() {
                     ui.add_space(10.0);
-                    ui.heading(
-                        egui::RichText::new("Completed Quests")
-                            .color(egui::Color32::GREEN),
-                    );
+                    ui.heading(egui::RichText::new("Completed Quests").color(egui::Color32::GREEN));
                     ui.separator();
 
                     for quest in completed_quests {
@@ -430,15 +444,14 @@ pub fn render_quest_log(ctx: &egui::Context, app_state: &AppState) {
                     .world
                     .quests
                     .iter()
-                    .filter(|q| q.status == QuestStatus::Failed || q.status == QuestStatus::Abandoned)
+                    .filter(|q| {
+                        q.status == QuestStatus::Failed || q.status == QuestStatus::Abandoned
+                    })
                     .collect();
 
                 if !failed_quests.is_empty() {
                     ui.add_space(10.0);
-                    ui.heading(
-                        egui::RichText::new("Failed Quests")
-                            .color(egui::Color32::RED),
-                    );
+                    ui.heading(egui::RichText::new("Failed Quests").color(egui::Color32::RED));
                     ui.separator();
 
                     for quest in failed_quests {
@@ -584,84 +597,78 @@ pub fn render_settings(ctx: &egui::Context, app_state: &mut AppState) -> bool {
             ui.separator();
 
             // Display section
-            ui.collapsing(
-                egui::RichText::new("Display").strong(),
-                |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Character panel:");
-                        if ui.selectable_label(app_state.character_panel_expanded, "Expanded").clicked() {
-                            app_state.character_panel_expanded = true;
-                        }
-                        if ui.selectable_label(!app_state.character_panel_expanded, "Collapsed").clicked() {
-                            app_state.character_panel_expanded = false;
-                        }
-                    });
-                },
-            );
+            ui.collapsing(egui::RichText::new("Display").strong(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Character panel:");
+                    if ui
+                        .selectable_label(app_state.character_panel_expanded, "Expanded")
+                        .clicked()
+                    {
+                        app_state.character_panel_expanded = true;
+                    }
+                    if ui
+                        .selectable_label(!app_state.character_panel_expanded, "Collapsed")
+                        .clicked()
+                    {
+                        app_state.character_panel_expanded = false;
+                    }
+                });
+            });
 
             ui.add_space(8.0);
 
             // Save files section
-            ui.collapsing(
-                egui::RichText::new("Save Files").strong(),
-                |ui| {
-                    ui.label("Save directory: saves/");
-                    ui.label("Character saves: saves/characters/");
+            ui.collapsing(egui::RichText::new("Save Files").strong(), |ui| {
+                ui.label("Save directory: saves/");
+                ui.label("Character saves: saves/characters/");
 
-                    ui.add_space(4.0);
+                ui.add_space(4.0);
 
-                    if ui.button("Open saves folder").clicked() {
-                        #[cfg(target_os = "macos")]
-                        {
-                            let _ = std::process::Command::new("open").arg("saves").spawn();
-                        }
-                        #[cfg(target_os = "windows")]
-                        {
-                            let _ = std::process::Command::new("explorer").arg("saves").spawn();
-                        }
-                        #[cfg(target_os = "linux")]
-                        {
-                            let _ = std::process::Command::new("xdg-open").arg("saves").spawn();
-                        }
+                if ui.button("Open saves folder").clicked() {
+                    #[cfg(target_os = "macos")]
+                    {
+                        let _ = std::process::Command::new("open").arg("saves").spawn();
                     }
-                },
-            );
+                    #[cfg(target_os = "windows")]
+                    {
+                        let _ = std::process::Command::new("explorer").arg("saves").spawn();
+                    }
+                    #[cfg(target_os = "linux")]
+                    {
+                        let _ = std::process::Command::new("xdg-open").arg("saves").spawn();
+                    }
+                }
+            });
 
             ui.add_space(8.0);
 
             // Keyboard shortcuts
-            ui.collapsing(
-                egui::RichText::new("Keyboard Shortcuts").strong(),
-                |ui| {
-                    ui.label("Ctrl+S / Cmd+S - Save game");
-                    ui.label("Ctrl+Q / Cmd+Q - Quit game");
-                    ui.label("I - Inventory");
-                    ui.label("C - Character sheet");
-                    ui.label("Shift+Q - Quest log");
-                    ui.label("F1 / ? - Help");
-                    ui.label("Escape - Close overlay");
-                },
-            );
+            ui.collapsing(egui::RichText::new("Keyboard Shortcuts").strong(), |ui| {
+                ui.label("Ctrl+S / Cmd+S - Save game");
+                ui.label("Ctrl+Q / Cmd+Q - Quit game");
+                ui.label("I - Inventory");
+                ui.label("C - Character sheet");
+                ui.label("Shift+Q - Quest log");
+                ui.label("F1 / ? - Help");
+                ui.label("Escape - Close overlay");
+            });
 
             ui.add_space(8.0);
 
             // About section
-            ui.collapsing(
-                egui::RichText::new("About").strong(),
-                |ui| {
-                    ui.label(
-                        egui::RichText::new("D&D: AI Dungeon Master")
-                            .color(egui::Color32::from_rgb(218, 165, 32)),
-                    );
-                    ui.label("A text-based adventure powered by AI");
-                    ui.add_space(4.0);
-                    ui.label(
-                        egui::RichText::new("Built with Rust, Bevy, and Claude")
-                            .small()
-                            .color(egui::Color32::GRAY),
-                    );
-                },
-            );
+            ui.collapsing(egui::RichText::new("About").strong(), |ui| {
+                ui.label(
+                    egui::RichText::new("D&D: AI Dungeon Master")
+                        .color(egui::Color32::from_rgb(218, 165, 32)),
+                );
+                ui.label("A text-based adventure powered by AI");
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new("Built with Rust, Bevy, and Claude")
+                        .small()
+                        .color(egui::Color32::GRAY),
+                );
+            });
 
             ui.add_space(16.0);
             ui.separator();
@@ -674,7 +681,10 @@ pub fn render_settings(ctx: &egui::Context, app_state: &mut AppState) -> bool {
                 }
 
                 if ui
-                    .button(egui::RichText::new("Quit Game").color(egui::Color32::from_rgb(200, 100, 100)))
+                    .button(
+                        egui::RichText::new("Quit Game")
+                            .color(egui::Color32::from_rgb(200, 100, 100)),
+                    )
                     .clicked()
                 {
                     std::process::exit(0);
@@ -758,7 +768,11 @@ pub fn render_load_character(
                                 meta.level,
                                 meta.race,
                                 meta.class,
-                                if meta.has_backstory { " (has backstory)" } else { "" }
+                                if meta.has_backstory {
+                                    " (has backstory)"
+                                } else {
+                                    ""
+                                }
                             );
 
                             if ui.selectable_label(is_selected, text).clicked() {
@@ -772,11 +786,16 @@ pub fn render_load_character(
                 ui.horizontal(|ui| {
                     let can_load = save_list.selected.is_some();
 
-                    if ui.add_enabled(can_load, egui::Button::new("Load & Play")).clicked() {
+                    if ui
+                        .add_enabled(can_load, egui::Button::new("Load & Play"))
+                        .clicked()
+                    {
                         if let Some(idx) = save_list.selected {
                             let path = save_list.saves[idx].path.clone();
                             // Load the character using the shared runtime
-                            match crate::runtime::RUNTIME.block_on(dnd_core::SavedCharacter::load_json(&path)) {
+                            match crate::runtime::RUNTIME
+                                .block_on(dnd_core::SavedCharacter::load_json(&path))
+                            {
                                 Ok(saved) => {
                                     selected_character = Some(saved.character);
                                     app_state.overlay = ActiveOverlay::None;
@@ -882,7 +901,10 @@ pub fn render_load_game(
                 ui.horizontal(|ui| {
                     let can_load = save_list.selected.is_some();
 
-                    if ui.add_enabled(can_load, egui::Button::new("Load Game")).clicked() {
+                    if ui
+                        .add_enabled(can_load, egui::Button::new("Load Game"))
+                        .clicked()
+                    {
                         if let Some(idx) = save_list.selected {
                             selected_path = Some(save_list.saves[idx].path.clone());
                         }
@@ -994,7 +1016,10 @@ pub fn render_spell_detail(ctx: &egui::Context, app_state: &mut AppState) {
                         });
 
                     // Combat info if applicable
-                    if spell.damage_dice.is_some() || spell.healing_dice.is_some() || spell.save_type.is_some() {
+                    if spell.damage_dice.is_some()
+                        || spell.healing_dice.is_some()
+                        || spell.save_type.is_some()
+                    {
                         ui.separator();
                         ui.label(egui::RichText::new("Combat").strong());
 
@@ -1038,7 +1063,9 @@ pub fn render_spell_detail(ctx: &egui::Context, app_state: &mut AppState) {
                             .color(egui::Color32::GRAY),
                     );
                     ui.add_space(8.0);
-                    ui.label("This spell may be from a source not yet added to the SRD 5.2 database.");
+                    ui.label(
+                        "This spell may be from a source not yet added to the SRD 5.2 database.",
+                    );
                 }
             }
 

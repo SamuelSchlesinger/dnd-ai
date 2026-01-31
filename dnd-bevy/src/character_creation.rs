@@ -381,12 +381,18 @@ pub fn render_character_creation(
                 CreationStep::Race => render_race_step(&mut columns[0], creation),
                 CreationStep::Class => render_class_step(&mut columns[0], creation),
                 CreationStep::Background => render_background_step(&mut columns[0], creation),
-                CreationStep::AbilityMethod => render_ability_method_step(&mut columns[0], creation),
-                CreationStep::AbilityScores => render_ability_scores_step(&mut columns[0], creation),
+                CreationStep::AbilityMethod => {
+                    render_ability_method_step(&mut columns[0], creation)
+                }
+                CreationStep::AbilityScores => {
+                    render_ability_scores_step(&mut columns[0], creation)
+                }
                 CreationStep::Skills => render_skills_step(&mut columns[0], creation),
                 CreationStep::Spells => render_spells_step(&mut columns[0], creation),
                 CreationStep::Backstory => render_backstory_step(&mut columns[0], creation),
-                CreationStep::Review => render_review_step(&mut columns[0], creation, next_phase, app_state, commands),
+                CreationStep::Review => {
+                    render_review_step(&mut columns[0], creation, next_phase, app_state, commands)
+                }
             }
 
             // Right column: character preview
@@ -428,7 +434,10 @@ fn render_name_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
             .desired_width(300.0),
     );
 
-    if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && !creation.name.trim().is_empty() {
+    if response.lost_focus()
+        && ui.input(|i| i.key_pressed(egui::Key::Enter))
+        && !creation.name.trim().is_empty()
+    {
         creation.step = CreationStep::Race;
     }
 
@@ -605,7 +614,10 @@ fn render_standard_array(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
     ui.horizontal(|ui| {
         for (i, value) in standard_array.iter().enumerate() {
             let used = creation.ability_assignment[i].is_some();
-            if ui.add_enabled(!used, egui::Button::new(value.to_string())).clicked() {
+            if ui
+                .add_enabled(!used, egui::Button::new(value.to_string()))
+                .clicked()
+            {
                 // Find first unassigned ability
                 for ability in &abilities {
                     if !creation.ability_assignment.contains(&Some(*ability)) {
@@ -658,7 +670,10 @@ fn render_point_buy(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
                 creation.point_buy_points >= new_cost - current_cost
             };
 
-            if ui.add_enabled(can_increase, egui::Button::new("+")).clicked() {
+            if ui
+                .add_enabled(can_increase, egui::Button::new("+"))
+                .clicked()
+            {
                 let current_cost = point_buy_cost(score);
                 let new_cost = point_buy_cost(score + 1);
                 let cost_diff = new_cost - current_cost;
@@ -705,7 +720,10 @@ fn render_rolled(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
     ui.horizontal(|ui| {
         for (i, value) in creation.rolled_scores.iter().enumerate() {
             let used = creation.ability_assignment[i].is_some();
-            if ui.add_enabled(!used, egui::Button::new(value.to_string())).clicked() {
+            if ui
+                .add_enabled(!used, egui::Button::new(value.to_string()))
+                .clicked()
+            {
                 // Find first unassigned ability
                 for ability in &abilities {
                     if !creation.ability_assignment.contains(&Some(*ability)) {
@@ -743,7 +761,8 @@ fn render_skills_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
     egui::ScrollArea::vertical().show(ui, |ui| {
         for skill in &creation.available_skills.clone() {
             let is_selected = creation.selected_skills.contains(skill);
-            let can_select = is_selected || creation.selected_skills.len() < creation.required_skill_count;
+            let can_select =
+                is_selected || creation.selected_skills.len() < creation.required_skill_count;
 
             let text = if is_selected {
                 format!("[X] {}", skill.name())
@@ -751,7 +770,10 @@ fn render_skills_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
                 format!("[ ] {}", skill.name())
             };
 
-            if ui.add_enabled(can_select, egui::SelectableLabel::new(is_selected, text)).clicked() {
+            if ui
+                .add_enabled(can_select, egui::SelectableLabel::new(is_selected, text))
+                .clicked()
+            {
                 if is_selected {
                     creation.selected_skills.retain(|s| s != skill);
                 } else {
@@ -762,7 +784,9 @@ fn render_skills_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
     });
 
     ui.add_space(10.0);
-    if creation.selected_skills.len() == creation.required_skill_count && ui.button("Next >").clicked() {
+    if creation.selected_skills.len() == creation.required_skill_count
+        && ui.button("Next >").clicked()
+    {
         // Check if class is a spellcaster
         if let Some(class) = creation.class {
             if class.is_spellcaster() {
@@ -826,7 +850,11 @@ fn render_spells_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
         ui.label(format!(
             "Select {} cantrip{} ({} selected):",
             creation.required_cantrip_count,
-            if creation.required_cantrip_count == 1 { "" } else { "s" },
+            if creation.required_cantrip_count == 1 {
+                ""
+            } else {
+                "s"
+            },
             creation.selected_cantrips.len()
         ));
         ui.add_space(5.0);
@@ -868,7 +896,11 @@ fn render_spells_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
         ui.label(format!(
             "Select {} spell{} ({} selected):",
             creation.required_spell_count,
-            if creation.required_spell_count == 1 { "" } else { "s" },
+            if creation.required_spell_count == 1 {
+                ""
+            } else {
+                "s"
+            },
             creation.selected_spells.len()
         ));
         ui.add_space(5.0);
@@ -935,14 +967,16 @@ fn render_backstory_step(ui: &mut egui::Ui, creation: &mut CharacterCreation) {
     );
     ui.add_space(10.0);
 
-    egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
-        ui.add(
-            egui::TextEdit::multiline(&mut creation.backstory)
-                .hint_text("Who is your character? Where do they come from? What drives them?")
-                .desired_width(f32::INFINITY)
-                .desired_rows(12),
-        );
-    });
+    egui::ScrollArea::vertical()
+        .max_height(300.0)
+        .show(ui, |ui| {
+            ui.add(
+                egui::TextEdit::multiline(&mut creation.backstory)
+                    .hint_text("Who is your character? Where do they come from? What drives them?")
+                    .desired_width(f32::INFINITY)
+                    .desired_rows(12),
+            );
+        });
 
     ui.add_space(10.0);
     ui.horizontal(|ui| {
@@ -985,7 +1019,8 @@ fn render_review_step(
             match creation.build_character() {
                 Ok(character) => {
                     let saved = dnd_core::SavedCharacter::new(character);
-                    let path = dnd_core::persist::character_save_path("saves/characters", &creation.name);
+                    let path =
+                        dnd_core::persist::character_save_path("saves/characters", &creation.name);
 
                     // Spawn async save task
                     let path_clone = path.clone();
@@ -1028,8 +1063,7 @@ fn render_preview(ui: &mut egui::Ui, creation: &CharacterCreation) {
 
     ui.group(|ui| {
         ui.heading(
-            egui::RichText::new(&character.name)
-                .color(egui::Color32::from_rgb(218, 165, 32)),
+            egui::RichText::new(&character.name).color(egui::Color32::from_rgb(218, 165, 32)),
         );
 
         // Race/Class

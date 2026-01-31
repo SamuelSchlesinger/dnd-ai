@@ -140,7 +140,10 @@ fn scenarios() -> Vec<Scenario> {
     ]
 }
 
-async fn run_scenario(scenario: &Scenario, output_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_scenario(
+    scenario: &Scenario,
+    output_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n{}", "=".repeat(60));
     println!("Running: {}", scenario.title);
     println!("{}\n", "=".repeat(60));
@@ -193,7 +196,10 @@ async fn run_scenario(scenario: &Scenario, output_dir: &Path) -> Result<(), Box<
 
         transcript.push_str("---\n\n");
 
-        println!("  Response: {}...\n", &response.narrative[..response.narrative.len().min(100)]);
+        println!(
+            "  Response: {}...\n",
+            &response.narrative[..response.narrative.len().min(100)]
+        );
     }
 
     // Footer

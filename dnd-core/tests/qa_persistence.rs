@@ -43,7 +43,9 @@ async fn test_save_and_load_basic() {
     let config = HeadlessConfig::quick_start("Thorin Ironforge")
         .with_campaign_name("Persistence Test Campaign");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Record initial state
     let initial_name = game.player_name().to_string();
@@ -56,8 +58,14 @@ async fn test_save_and_load_basic() {
     println!("  Max HP: {}", initial_max_hp);
 
     // Take an action to generate some game state
-    let response = game.send("I look around the room").await.expect("Failed to send action");
-    println!("  DM Response: {}...", &response.narrative.chars().take(100).collect::<String>());
+    let response = game
+        .send("I look around the room")
+        .await
+        .expect("Failed to send action");
+    println!(
+        "  DM Response: {}...",
+        &response.narrative.chars().take(100).collect::<String>()
+    );
 
     // Save the game
     game.save(&save_path).await.expect("Failed to save game");
@@ -67,7 +75,9 @@ async fn test_save_and_load_basic() {
     assert!(save_path.exists(), "Save file should exist after saving");
 
     // Load the game
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load game");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load game");
 
     // Verify state is preserved
     println!("\nLoaded state:");
@@ -75,9 +85,21 @@ async fn test_save_and_load_basic() {
     println!("  Location: {}", loaded_game.current_location());
     println!("  Max HP: {}", loaded_game.max_hp());
 
-    assert_eq!(loaded_game.player_name(), initial_name, "Player name should be preserved");
-    assert_eq!(loaded_game.current_location(), initial_location, "Location should be preserved");
-    assert_eq!(loaded_game.max_hp(), initial_max_hp, "Max HP should be preserved");
+    assert_eq!(
+        loaded_game.player_name(),
+        initial_name,
+        "Player name should be preserved"
+    );
+    assert_eq!(
+        loaded_game.current_location(),
+        initial_location,
+        "Location should be preserved"
+    );
+    assert_eq!(
+        loaded_game.max_hp(),
+        initial_max_hp,
+        "Max HP should be preserved"
+    );
 
     println!("\nSUCCESS: Basic save/load works correctly!");
 }
@@ -101,10 +123,12 @@ async fn test_save_and_load_hp_state() {
     let save_path = temp_dir.path().join("hp_test_save.json");
 
     // Create a game with a fighter
-    let config = HeadlessConfig::quick_start("Wounded Warrior")
-        .with_campaign_name("HP Persistence Test");
+    let config =
+        HeadlessConfig::quick_start("Wounded Warrior").with_campaign_name("HP Persistence Test");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Record initial HP
     let initial_hp = game.current_hp();
@@ -113,7 +137,11 @@ async fn test_save_and_load_hp_state() {
 
     // Manually damage the character by accessing the session
     // We'll do this through save/load with modified state
-    game.session_mut().world_mut().player_character.hit_points.current = max_hp / 2;
+    game.session_mut()
+        .world_mut()
+        .player_character
+        .hit_points
+        .current = max_hp / 2;
     let damaged_hp = game.current_hp();
     println!("After damage: {}/{}", damaged_hp, max_hp);
 
@@ -121,9 +149,15 @@ async fn test_save_and_load_hp_state() {
     game.save(&save_path).await.expect("Failed to save");
 
     // Load and verify HP is preserved
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load");
 
-    println!("Loaded HP: {}/{}", loaded_game.current_hp(), loaded_game.max_hp());
+    println!(
+        "Loaded HP: {}/{}",
+        loaded_game.current_hp(),
+        loaded_game.max_hp()
+    );
 
     assert_eq!(
         loaded_game.current_hp(),
@@ -166,7 +200,9 @@ async fn test_save_and_load_combat_state() {
     )
     .with_campaign_name("Combat Persistence Test");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Try to initiate combat
     println!("Attempting to initiate combat...");
@@ -175,7 +211,10 @@ async fn test_save_and_load_combat_state() {
         .await
         .expect("Failed to send action");
 
-    println!("DM Response: {}...", &response.narrative.chars().take(150).collect::<String>());
+    println!(
+        "DM Response: {}...",
+        &response.narrative.chars().take(150).collect::<String>()
+    );
 
     // Record combat state
     let in_combat_before = game.in_combat();
@@ -185,7 +224,9 @@ async fn test_save_and_load_combat_state() {
     game.save(&save_path).await.expect("Failed to save");
 
     // Load and check combat state
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load");
 
     let in_combat_after = loaded_game.in_combat();
     println!("In combat after load: {}", in_combat_after);
@@ -222,15 +263,21 @@ async fn test_save_and_load_special_characters() {
     let config = HeadlessConfig::quick_start(special_name)
         .with_campaign_name("Special Characters' Test <Campaign>");
 
-    let game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("Original name: {}", game.player_name());
 
     // Save the game
-    game.save(&save_path).await.expect("Failed to save with special characters");
+    game.save(&save_path)
+        .await
+        .expect("Failed to save with special characters");
 
     // Load and verify
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load");
 
     println!("Loaded name: {}", loaded_game.player_name());
 
@@ -299,7 +346,11 @@ async fn test_save_creates_parent_directory() {
 
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     // Create a path with nested directories that don't exist
-    let nested_path = temp_dir.path().join("nested").join("deep").join("save.json");
+    let nested_path = temp_dir
+        .path()
+        .join("nested")
+        .join("deep")
+        .join("save.json");
 
     // Verify parent doesn't exist
     assert!(
@@ -309,7 +360,9 @@ async fn test_save_creates_parent_directory() {
 
     // Create a game
     let config = HeadlessConfig::quick_start("Directory Test Hero");
-    let game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Try to save to nested path
     let result = game.save(&nested_path).await;
@@ -326,7 +379,10 @@ async fn test_save_creates_parent_directory() {
         }
         Err(e) => {
             // This is expected behavior if the implementation doesn't create directories
-            println!("Save failed (expected if no auto-directory creation): {}", e);
+            println!(
+                "Save failed (expected if no auto-directory creation): {}",
+                e
+            );
             println!("NOTE: The save function does not auto-create parent directories.");
             println!("      This is expected behavior - users should ensure directories exist.");
 
@@ -338,7 +394,10 @@ async fn test_save_creates_parent_directory() {
                 .await
                 .expect("Save should succeed after creating directory");
 
-            assert!(nested_path.exists(), "Save file should exist after manual directory creation");
+            assert!(
+                nested_path.exists(),
+                "Save file should exist after manual directory creation"
+            );
             println!("Save succeeded after manual directory creation.");
         }
     }
@@ -365,10 +424,11 @@ async fn test_multiple_save_load_cycles() {
     let save_path = temp_dir.path().join("multi_cycle_save.json");
 
     // Create initial game
-    let config = HeadlessConfig::quick_start("Cycle Tester")
-        .with_campaign_name("Multi-Cycle Test");
+    let config = HeadlessConfig::quick_start("Cycle Tester").with_campaign_name("Multi-Cycle Test");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Perform multiple save/load cycles
     for cycle in 1..=3 {
@@ -378,7 +438,10 @@ async fn test_multiple_save_load_cycles() {
         let action = format!("I take step number {}", cycle);
         let response = game.send(&action).await.expect("Failed to send action");
         println!("Action: {}", action);
-        println!("Response: {}...", &response.narrative.chars().take(80).collect::<String>());
+        println!(
+            "Response: {}...",
+            &response.narrative.chars().take(80).collect::<String>()
+        );
 
         // Record state before save
         let hp_before = game.current_hp();
@@ -389,10 +452,17 @@ async fn test_multiple_save_load_cycles() {
         println!("Saved. HP: {}", hp_before);
 
         // Load into new game instance
-        game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+        game = HeadlessGame::load(&save_path)
+            .await
+            .expect("Failed to load");
 
         // Verify state
-        assert_eq!(game.current_hp(), hp_before, "HP should match after cycle {}", cycle);
+        assert_eq!(
+            game.current_hp(),
+            hp_before,
+            "HP should match after cycle {}",
+            cycle
+        );
         assert_eq!(
             game.current_location(),
             location_before,
@@ -400,7 +470,11 @@ async fn test_multiple_save_load_cycles() {
             cycle
         );
 
-        println!("Loaded and verified. HP: {}, Location: {}", game.current_hp(), game.current_location());
+        println!(
+            "Loaded and verified. HP: {}, Location: {}",
+            game.current_hp(),
+            game.current_location()
+        );
     }
 
     println!("\nSUCCESS: All save/load cycles completed successfully!");
@@ -433,7 +507,9 @@ async fn test_save_and_load_character_details() {
     )
     .with_campaign_name("Character Details Test");
 
-    let game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     // Record initial state
     let initial_name = game.player_name().to_string();
@@ -449,7 +525,9 @@ async fn test_save_and_load_character_details() {
     game.save(&save_path).await.expect("Failed to save");
 
     // Load
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load");
 
     println!("\nLoaded character:");
     println!("  Name: {}", loaded_game.player_name());
@@ -458,7 +536,10 @@ async fn test_save_and_load_character_details() {
 
     // Verify
     assert_eq!(loaded_game.player_name(), initial_name);
-    assert_eq!(loaded_game.player_class().map(|s| s.to_string()), initial_class);
+    assert_eq!(
+        loaded_game.player_class().map(|s| s.to_string()),
+        initial_class
+    );
     assert_eq!(loaded_game.player_background(), initial_background);
 
     println!("\nSUCCESS: Character details preserved correctly!");
@@ -484,20 +565,29 @@ async fn test_save_file_is_valid_json() {
 
     // Create and save a game
     let config = HeadlessConfig::quick_start("JSON Test Hero");
-    let game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
     game.save(&save_path).await.expect("Failed to save");
 
     // Read and parse the save file
     let content = std::fs::read_to_string(&save_path).expect("Failed to read save file");
 
     println!("Save file size: {} bytes", content.len());
-    println!("First 500 chars:\n{}", &content.chars().take(500).collect::<String>());
+    println!(
+        "First 500 chars:\n{}",
+        &content.chars().take(500).collect::<String>()
+    );
 
     // Verify it's valid JSON
-    let parsed: serde_json::Value = serde_json::from_str(&content).expect("Save file should be valid JSON");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&content).expect("Save file should be valid JSON");
 
     // Check for expected fields
-    assert!(parsed.get("world").is_some(), "Save should contain 'world' field");
+    assert!(
+        parsed.get("world").is_some(),
+        "Save should contain 'world' field"
+    );
 
     // Check world contains player_character
     if let Some(world) = parsed.get("world") {
@@ -536,20 +626,32 @@ async fn test_overwrite_existing_save() {
 
     // Create first game and save
     let config1 = HeadlessConfig::quick_start("First Hero");
-    let game1 = HeadlessGame::new(config1).await.expect("Failed to create first game");
-    game1.save(&save_path).await.expect("Failed to save first game");
+    let game1 = HeadlessGame::new(config1)
+        .await
+        .expect("Failed to create first game");
+    game1
+        .save(&save_path)
+        .await
+        .expect("Failed to save first game");
 
     println!("First save - Name: {}", game1.player_name());
 
     // Create second game with different name and overwrite
     let config2 = HeadlessConfig::quick_start("Second Hero");
-    let game2 = HeadlessGame::new(config2).await.expect("Failed to create second game");
-    game2.save(&save_path).await.expect("Failed to save second game");
+    let game2 = HeadlessGame::new(config2)
+        .await
+        .expect("Failed to create second game");
+    game2
+        .save(&save_path)
+        .await
+        .expect("Failed to save second game");
 
     println!("Second save - Name: {}", game2.player_name());
 
     // Load and verify it's the second game
-    let loaded_game = HeadlessGame::load(&save_path).await.expect("Failed to load");
+    let loaded_game = HeadlessGame::load(&save_path)
+        .await
+        .expect("Failed to load");
 
     println!("Loaded - Name: {}", loaded_game.player_name());
 

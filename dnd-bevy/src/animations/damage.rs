@@ -50,7 +50,9 @@ pub fn spawn_damage_number(
             duration,
             elapsed: 0.0,
         },
-        AnimationLifetime { remaining: duration + 0.1 },
+        AnimationLifetime {
+            remaining: duration + 0.1,
+        },
         Transform::from_translation(position.extend(15.0)),
         Visibility::default(),
     ));

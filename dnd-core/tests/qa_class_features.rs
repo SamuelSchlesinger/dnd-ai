@@ -37,7 +37,9 @@ async fn test_fighter_second_wind() {
         Background::Soldier,
     );
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== FIGHTER SECOND WIND TEST ===");
     println!("Character: {}", game.player_name());
@@ -70,7 +72,10 @@ async fn test_fighter_second_wind() {
 
     // Check if Second Wind was used (character should have gained HP)
     if final_hp > initial_hp {
-        println!("\nSUCCESS: Second Wind healed {} HP!", final_hp - initial_hp);
+        println!(
+            "\nSUCCESS: Second Wind healed {} HP!",
+            final_hp - initial_hp
+        );
     } else if initial_hp == game.max_hp() {
         println!("\nNOTE: Character was at full HP, healing had no effect");
     } else {
@@ -80,8 +85,14 @@ async fn test_fighter_second_wind() {
 
     // Verify the response mentions Second Wind
     let mentions_second_wind = response.narrative.to_lowercase().contains("second wind")
-        || response.narrative.to_lowercase().contains("surge of energy")
-        || response.narrative.to_lowercase().contains("catch your breath");
+        || response
+            .narrative
+            .to_lowercase()
+            .contains("surge of energy")
+        || response
+            .narrative
+            .to_lowercase()
+            .contains("catch your breath");
 
     if !mentions_second_wind {
         println!("\nNOTE: DM response doesn't explicitly mention Second Wind");
@@ -105,7 +116,9 @@ async fn test_fighter_action_surge() {
     )
     .with_starting_location("The Training Grounds");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== FIGHTER ACTION SURGE TEST ===");
     println!("Character: {}", game.player_name());
@@ -132,7 +145,10 @@ async fn test_fighter_action_surge() {
     let mentions_action_surge = response.narrative.to_lowercase().contains("action surge")
         || response.narrative.to_lowercase().contains("burst of speed")
         || response.narrative.to_lowercase().contains("extra action")
-        || response.narrative.to_lowercase().contains("additional action");
+        || response
+            .narrative
+            .to_lowercase()
+            .contains("additional action");
 
     if mentions_action_surge {
         println!("\nSUCCESS: Action Surge was acknowledged by the DM!");
@@ -142,7 +158,11 @@ async fn test_fighter_action_surge() {
 
     // Check the class_resources to see if action_surge_used was tracked
     let session = game.session();
-    let action_surge_used = session.world().player_character.class_resources.action_surge_used;
+    let action_surge_used = session
+        .world()
+        .player_character
+        .class_resources
+        .action_surge_used;
     println!("  Action Surge used (tracked): {}", action_surge_used);
 
     if action_surge_used {
@@ -173,7 +193,9 @@ async fn test_barbarian_rage() {
     )
     .with_starting_location("A dark forest clearing");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== BARBARIAN RAGE TEST ===");
     println!("Character: {}", game.player_name());
@@ -254,7 +276,9 @@ async fn test_wizard_spellcasting() {
     )
     .with_starting_location("An ancient library");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== WIZARD SPELLCASTING TEST ===");
     println!("Character: {}", game.player_name());
@@ -316,7 +340,9 @@ async fn test_wizard_spellcasting() {
     println!("  1st level slots: {:?}", slots_after_spell);
 
     // Check if a spell slot was consumed
-    if let (Some((_, used_before)), Some((_, used_after))) = (slots_after_cantrip, slots_after_spell) {
+    if let (Some((_, used_before)), Some((_, used_after))) =
+        (slots_after_cantrip, slots_after_spell)
+    {
         if used_after > used_before {
             println!("SUCCESS: Leveled spell consumed a spell slot!");
         } else {
@@ -342,14 +368,20 @@ async fn test_sorcerer_metamagic() {
     )
     .with_starting_location("A noble's estate");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== SORCERER METAMAGIC TEST ===");
     println!("Character: {}", game.player_name());
 
     // Check initial sorcery points
     let session = game.session();
-    let initial_sorcery_points = session.world().player_character.class_resources.sorcery_points;
+    let initial_sorcery_points = session
+        .world()
+        .player_character
+        .class_resources
+        .sorcery_points;
     println!("Initial sorcery points: {}", initial_sorcery_points);
 
     // Try to use Quickened Spell metamagic
@@ -362,7 +394,11 @@ async fn test_sorcerer_metamagic() {
     println!("  Narrative: {}", response.narrative);
 
     let session = game.session();
-    let final_sorcery_points = session.world().player_character.class_resources.sorcery_points;
+    let final_sorcery_points = session
+        .world()
+        .player_character
+        .class_resources
+        .sorcery_points;
     println!("  Sorcery points: {}", final_sorcery_points);
 
     // Quickened Spell costs 2 sorcery points
@@ -397,14 +433,20 @@ async fn test_cleric_channel_divinity() {
     )
     .with_starting_location("A haunted cemetery");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== CLERIC CHANNEL DIVINITY TEST ===");
     println!("Character: {}", game.player_name());
 
     // Check initial channel divinity state
     let session = game.session();
-    let initial_cd_used = session.world().player_character.class_resources.channel_divinity_used;
+    let initial_cd_used = session
+        .world()
+        .player_character
+        .class_resources
+        .channel_divinity_used;
     println!("Initial channel_divinity_used: {}", initial_cd_used);
 
     // Use Turn Undead
@@ -430,8 +472,15 @@ async fn test_cleric_channel_divinity() {
 
     // Check if the channel_divinity_used field was updated
     let session = game.session();
-    let final_cd_used = session.world().player_character.class_resources.channel_divinity_used;
-    println!("  channel_divinity_used after Turn Undead: {}", final_cd_used);
+    let final_cd_used = session
+        .world()
+        .player_character
+        .class_resources
+        .channel_divinity_used;
+    println!(
+        "  channel_divinity_used after Turn Undead: {}",
+        final_cd_used
+    );
 
     // Note: The DM tool should set channel_divinity_used = true when used
     // Currently the field exists but the actual tracking happens via the Feature system
@@ -453,7 +502,9 @@ async fn test_cleric_healing_spell() {
         Background::Acolyte,
     );
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== CLERIC HEALING SPELL TEST ===");
     println!("Character: {}", game.player_name());
@@ -489,9 +540,15 @@ async fn test_cleric_healing_spell() {
         // Cure Wounds heals 1d8 + spellcasting modifier (minimum 1)
         // For a typical cleric, this should be 1-13 range
         if amount_healed >= 1 && amount_healed <= 15 {
-            println!("  Healing amount {} is in expected range for Cure Wounds", amount_healed);
+            println!(
+                "  Healing amount {} is in expected range for Cure Wounds",
+                amount_healed
+            );
         } else {
-            println!("  WARNING: Healing amount {} seems unusual for 1st level Cure Wounds", amount_healed);
+            println!(
+                "  WARNING: Healing amount {} seems unusual for 1st level Cure Wounds",
+                amount_healed
+            );
         }
     } else if hp_after_heal == game.max_hp() {
         println!("SUCCESS: Character healed to full HP!");
@@ -531,7 +588,9 @@ async fn test_rogue_sneak_attack() {
     )
     .with_starting_location("A dark alley");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== ROGUE SNEAK ATTACK TEST ===");
     println!("Character: {}", game.player_name());
@@ -597,7 +656,9 @@ async fn test_rogue_cunning_action() {
     )
     .with_starting_location("A crowded marketplace");
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== ROGUE CUNNING ACTION TEST ===");
     println!("Character: {}", game.player_name());
@@ -664,7 +725,9 @@ async fn test_multiclass_like_scenarios() {
         Background::Soldier,
     );
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== CLASS RESTRICTION TEST ===");
     println!("Character: {} (Fighter)", game.player_name());
@@ -700,10 +763,16 @@ async fn test_multiclass_like_scenarios() {
     // Check if the DM explains the fighter can't cast spells
     let correctly_handled = response.narrative.to_lowercase().contains("can't cast")
         || response.narrative.to_lowercase().contains("cannot cast")
-        || response.narrative.to_lowercase().contains("not a spellcaster")
+        || response
+            .narrative
+            .to_lowercase()
+            .contains("not a spellcaster")
         || response.narrative.to_lowercase().contains("no magic")
         || response.narrative.to_lowercase().contains("don't have")
-        || !response.narrative.to_lowercase().contains("fireball explodes");
+        || !response
+            .narrative
+            .to_lowercase()
+            .contains("fireball explodes");
 
     if correctly_handled {
         println!("SUCCESS: DM correctly handled non-spellcaster trying to cast");
@@ -728,7 +797,9 @@ async fn test_resource_recovery_on_rest() {
         Background::Soldier,
     );
 
-    let mut game = HeadlessGame::new(config).await.expect("Failed to create game");
+    let mut game = HeadlessGame::new(config)
+        .await
+        .expect("Failed to create game");
 
     println!("=== RESOURCE RECOVERY TEST ===");
     println!("Character: {}", game.player_name());
@@ -741,7 +812,11 @@ async fn test_resource_recovery_on_rest() {
 
     println!("\nUsed Second Wind:");
     let session = game.session();
-    let sw_used_before_rest = session.world().player_character.class_resources.second_wind_used;
+    let sw_used_before_rest = session
+        .world()
+        .player_character
+        .class_resources
+        .second_wind_used;
     println!("  Second Wind used: {}", sw_used_before_rest);
 
     // Take a short rest (should recover Second Wind)
@@ -754,7 +829,11 @@ async fn test_resource_recovery_on_rest() {
     println!("  Narrative: {}", response.narrative);
 
     let session = game.session();
-    let sw_used_after_rest = session.world().player_character.class_resources.second_wind_used;
+    let sw_used_after_rest = session
+        .world()
+        .player_character
+        .class_resources
+        .second_wind_used;
     println!("  Second Wind used: {}", sw_used_after_rest);
 
     if sw_used_before_rest && !sw_used_after_rest {

@@ -1,8 +1,8 @@
 //! Story memory store for entity and fact management.
 
-use super::consequence::{Consequence, ConsequenceId, ConsequenceSeverity};
 #[cfg(test)]
 use super::consequence::ConsequenceStatus;
+use super::consequence::{Consequence, ConsequenceId, ConsequenceSeverity};
 use super::entity::{Entity, EntityId, EntityType};
 use super::fact::{FactCategory, FactSource, StoryFact};
 use super::relationship::{Relationship, RelationshipType};
@@ -964,11 +964,7 @@ mod tests {
     fn test_consequences_by_importance() {
         let mut store = StoryMemory::new();
 
-        store.create_consequence(
-            "Minor trigger",
-            "Minor effect",
-            ConsequenceSeverity::Minor,
-        );
+        store.create_consequence("Minor trigger", "Minor effect", ConsequenceSeverity::Minor);
         store.create_consequence(
             "Critical trigger",
             "Critical effect",
