@@ -5,10 +5,10 @@ All notable changes to chronicler are documented in this file.
 ## [Unreleased]
 
 ### Core Features
-- **AI Dungeon Master** - Claude-powered DM that narrates adventures, runs NPCs, and adjudicates actions
+- **AI Dungeon Master** - Configurable LLM-powered DM that narrates adventures, runs NPCs, and adjudicates actions
 - **D&D 5e Rules Engine** - Full implementation of ability checks, saving throws, combat, conditions, and death saves
 - **Story Memory System** - AI remembers characters, locations, events, and relationships across sessions
-- **Consequence System** - Actions have lasting effects that resurface naturally (powered by Claude Haiku for semantic relevance)
+- **Consequence System** - Actions have lasting effects that resurface naturally (using the provider's fast model for semantic relevance)
 - **Bevy GUI** - Modern desktop application with medieval-themed dark UI
 - **Character Creation Wizard** - Full SRD races, classes, backgrounds, and point-buy ability scores
 - **Save/Load System** - Persist and continue campaigns across sessions
@@ -17,6 +17,8 @@ All notable changes to chronicler are documented in this file.
 - **Combat System** - Initiative, attack rolls, damage, conditions, and death saving throws
 
 ### Recent Features
+- Add Anthropic, OpenAI, OpenRouter/Kimi K3, and Ollama provider support
+- Add `--local [MODEL]`, defaulting to `qwen3.6:35b-a3b`
 - Add deferred_effects config option to DM for controlling effect timing
 - Persist audio settings to disk
 - Add sound system with synthesized effects and real-time streaming
@@ -29,7 +31,7 @@ All notable changes to chronicler are documented in this file.
 ### Improvements
 - Replace Unicode characters with ASCII in UI for better compatibility
 - Deduplicate point_buy_cost function
-- Modularize codebase: split large files into submodules (ui/overlays, state, sound, effects, dm/tools, spells, world, claude client)
+- Modularize codebase: split large files into submodules (ui/overlays, state, sound, effects, dm/tools, spells, world, LLM client)
 - Remove unused animation code and play_time_minutes field
 - Improve start_combat tool schema with enemy stat parameters
 - Fix hardcoded combat stats for proper AC and initiative

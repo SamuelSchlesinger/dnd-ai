@@ -3,7 +3,7 @@
 //! These tools allow the DM to schedule future events that trigger
 //! based on time passage, not just player actions.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Schedule a future event.

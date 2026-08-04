@@ -117,9 +117,11 @@ pub fn main_ui_system(
                             // Start loading the game
                             app_state.set_status_persistent("Loading game...");
                             let (tx, rx) = std::sync::mpsc::channel();
+                            let llm_client = config.llm_client();
                             std::thread::spawn(move || {
                                 let result = crate::runtime::RUNTIME.block_on(async {
-                                    chronicler_core::GameSession::load(&path)
+                                    let client = llm_client?;
+                                    chronicler_core::GameSession::load_with_client(&path, client)
                                         .await
                                         .map_err(|e| e.to_string())
                                 });
@@ -244,12 +246,13 @@ fn configure_style(ctx: &egui::Context) {
     // Enhanced hover state with gold tint
     visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(90, 75, 50); // Brighter with gold tint
     visuals.widgets.hovered.bg_stroke =
-        egui::Stroke::new(1.0, egui::Color32::from_rgb(218, 165, 32)); // Gold stroke
+        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(218, 165, 32)); // Gold stroke
     visuals.widgets.hovered.expansion = 1.0; // Slight expansion on hover
 
     // Active/pressed state
     visuals.widgets.active.bg_fill = egui::Color32::from_rgb(139, 69, 19); // Saddle brown
-    visuals.widgets.active.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(255, 215, 0)); // Bright gold stroke
+    visuals.widgets.active.bg_stroke =
+        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(255, 215, 0)); // Bright gold stroke
 
     ctx.set_style(style);
 }

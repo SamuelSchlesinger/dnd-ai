@@ -97,20 +97,23 @@ async fn worker_loop(
                 };
                 let _ = response_tx.send(response).await;
             }
-            Some(WorkerRequest::Load(path)) => match GameSession::load(&path).await {
-                Ok(new_session) => {
-                    session = new_session;
-                    let world_update = WorldUpdate::from_session(&session);
-                    let _ = response_tx
-                        .send(WorkerResponse::LoadComplete(Ok(world_update)))
-                        .await;
+            Some(WorkerRequest::Load(path)) => {
+                let client = session.dm().client().clone();
+                match GameSession::load_with_client(&path, client).await {
+                    Ok(new_session) => {
+                        session = new_session;
+                        let world_update = WorldUpdate::from_session(&session);
+                        let _ = response_tx
+                            .send(WorkerResponse::LoadComplete(Ok(world_update)))
+                            .await;
+                    }
+                    Err(e) => {
+                        let _ = response_tx
+                            .send(WorkerResponse::LoadComplete(Err(e.to_string())))
+                            .await;
+                    }
                 }
-                Err(e) => {
-                    let _ = response_tx
-                        .send(WorkerResponse::LoadComplete(Err(e.to_string())))
-                        .await;
-                }
-            },
+            }
             Some(WorkerRequest::Shutdown) | None => {
                 break;
             }

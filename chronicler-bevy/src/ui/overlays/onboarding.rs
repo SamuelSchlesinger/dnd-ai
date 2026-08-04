@@ -117,7 +117,7 @@ fn render_onboarding_page_welcome(ui: &mut egui::Ui) {
 
     ui.label(
         egui::RichText::new(
-            "You're about to play D&D 5th Edition with an AI Dungeon Master powered by Claude.",
+            "You're about to play D&D 5th Edition with an AI Dungeon Master powered by your chosen LLM.",
         )
         .size(16.0),
     );

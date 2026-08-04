@@ -4,7 +4,7 @@
 //! Implements a hybrid approach: shared campaign facts + sliding window
 //! of recent conversation.
 
-use claude::Message;
+use chronicler_llm::Message;
 use serde::{Deserialize, Serialize};
 
 /// Maximum number of recent messages to keep in full detail.

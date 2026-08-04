@@ -12,9 +12,14 @@
 
 ---
 
-A solo tabletop RPG powered by Claude. You play; the AI runs the world — narrating scenes, voicing NPCs, rolling dice, and tracking the consequences of your choices across sessions.
+A solo tabletop RPG with a replaceable AI backend. Use Anthropic, OpenAI,
+OpenRouter, local Ollama, or another OpenAI-compatible server. You play; the AI
+runs the world — narrating scenes, voicing NPCs, rolling dice, and tracking the
+consequences of your choices across sessions.
 
-Compatible with D&D 5e. Runs locally. [Bring your own API key.](https://console.anthropic.com/)
+The rules engine, tools, memory, and save format are model-provider independent.
+Only inference crosses the provider boundary, and you choose whether that stays
+local or uses a cloud service.
 
 ![Chronicle AI Screenshot](screenshot.png)
 
@@ -23,9 +28,56 @@ Compatible with D&D 5e. Runs locally. [Bring your own API key.](https://console.
 ```bash
 git clone https://github.com/SamuelSchlesinger/chronicler.git
 cd chronicler
-export ANTHROPIC_API_KEY=your_key_here
+
+# Local Ollama; defaults to qwen3.6:35b-a3b:
+cargo run -p chronicler -- --local
+
+# Or OpenRouter/Kimi K3:
+export OPENROUTER_API_KEY=your_key_here
 cargo run -p chronicler
 ```
+
+`--local` uses Ollama at `http://localhost:11434/v1` and defaults to
+`qwen3.6:35b-a3b`. It needs a running Ollama service and an installed model, but
+no API key. Override it with `--local MODEL`.
+
+### Provider configuration
+
+| Provider | Select with | Credential | Default narrative / fast model |
+|---|---|---|---|
+| OpenRouter | `CHRONICLER_PROVIDER=openrouter` | `OPENROUTER_API_KEY` | `moonshotai/kimi-k3` / same |
+| Anthropic | `CHRONICLER_PROVIDER=anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-6` / `claude-haiku-4-5-20251001` |
+| OpenAI | `CHRONICLER_PROVIDER=openai` | `OPENAI_API_KEY` | `gpt-5.6-sol` / `gpt-5.6-luna` |
+| Ollama | `--local [MODEL]` or `CHRONICLER_PROVIDER=local` | none | `qwen3.6:35b-a3b` / same |
+
+If `CHRONICLER_PROVIDER` is omitted, Chronicler selects the first configured
+credential in this order: OpenRouter, Anthropic, then OpenAI. This is startup
+selection, not runtime fallback. Override models with `CHRONICLER_MODEL` and
+`CHRONICLER_FAST_MODEL`; provider-specific variables are documented in
+[.env.example](.env.example).
+
+For another OpenAI-compatible server, set `CHRONICLER_PROVIDER=openai`,
+`OPENAI_BASE_URL`, and `OPENAI_MODEL`. A custom endpoint does not require an
+API key unless that server enforces one.
+
+Credentials are not stored in saves or logged. They are sent only in the
+selected provider's authentication header to its configured base URL. Ollama
+traffic stays on `localhost` unless you explicitly override `OLLAMA_BASE_URL`.
+
+See **[Model Providers](docs/PROVIDERS.md)** for complete configuration,
+custom-endpoint requirements, provider switching, and live smoke tests.
+
+### One game, interchangeable backends
+
+The game core sees the same normalized messages, streaming events, and tool
+calls regardless of provider. Native Anthropic requests and OpenAI-compatible
+requests are translated inside `chronicler-llm`; no provider-specific payloads
+leak into the rules engine or save format.
+
+That means you can play locally with Qwen, switch to Kimi K3 through
+OpenRouter, or resume the same save with an Anthropic or OpenAI model. The
+selected model must support function/tool calling—plain text completion alone
+is not enough to run the DM's mechanical tools.
 
 ## What Makes It Different
 
@@ -48,13 +100,14 @@ This isn't just a game — it's an experiment in **storytelling agent design**. 
 
 ### Multi-Model Architecture
 
-Different models for different jobs:
+Each configuration supplies a main model and a background model. They may be
+different models or the same one:
 
 | Task | Model | Why |
 |------|-------|-----|
-| Narrative generation | Sonnet | Creative, expressive, handles complex roleplay |
-| Relevance checking | Haiku | Fast, cheap — runs every turn to check story triggers |
-| State inference | Haiku | Detects implied changes the main model didn't record |
+| Narrative generation | Provider main model | Creative, expressive, handles complex roleplay |
+| Relevance checking | Provider fast model | Runs every turn to check story triggers |
+| State inference | Provider fast model | Detects implied changes the main model didn't record |
 
 This keeps costs low while maintaining quality where it matters.
 
@@ -104,7 +157,7 @@ register_consequence(
 )
 ```
 
-A fast model (Haiku) checks every player action against pending consequences using semantic matching — not keywords. This enables:
+The configured fast model checks every player action against pending consequences using semantic matching — not keywords. This enables:
 
 - **Revenge plots** — spare the bandit, he returns
 - **Reputation cascades** — help the village, merchants offer discounts
@@ -142,7 +195,7 @@ chronicler         Bevy + egui desktop app
     |
 chronicler-core    Game engine, rules, AI DM, persistence
     |
-claude             Minimal Anthropic API client
+chronicler-llm     Provider-neutral API + Anthropic/OpenAI-compatible transports
 ```
 
 [How the AI Dungeon Master Works](docs/HOW_IT_WORKS.md) — detailed technical deep-dive.
@@ -154,7 +207,7 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-Requires Rust and an [Anthropic API key](https://console.anthropic.com/). Runs on macOS, Linux, and Windows.
+Requires Rust plus either a configured cloud provider or a local Ollama model. Runs on macOS, Linux, and Windows.
 
 ## License
 

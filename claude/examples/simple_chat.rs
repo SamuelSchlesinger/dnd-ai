@@ -1,15 +1,15 @@
-//! Simple chat example using the Claude API client.
+//! Simple chat example using the configured LLM provider.
 //!
 //! Run with: cargo run -p claude --example simple_chat
 
-use claude::{Claude, Message, Request};
+use chronicler_llm::{Client, Message, Request};
 use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
 
-    let client = Claude::from_env()?;
+    let client = Client::from_env()?;
     let mut messages: Vec<Message> = Vec::new();
 
     println!("Simple Chat (type 'quit' to exit)\n");

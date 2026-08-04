@@ -1,6 +1,6 @@
 //! NPC management tools: creation, updates, movement, and removal.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Create a new NPC in the game world.

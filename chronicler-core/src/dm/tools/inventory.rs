@@ -1,6 +1,6 @@
 //! Inventory and currency management tools.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Give an item to the player.

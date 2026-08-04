@@ -13,10 +13,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env file
     let _ = dotenvy::dotenv();
 
-    // Check for API key
-    if std::env::var("ANTHROPIC_API_KEY").is_err() {
-        eprintln!("Error: ANTHROPIC_API_KEY environment variable not set");
-        eprintln!("Set it in your environment or create a .env file");
+    // Check for provider configuration
+    if chronicler_core::LlmConfig::from_env().is_err() {
+        eprintln!("Error: no LLM provider is configured");
+        eprintln!("Configure one in your environment or create a .env file");
         std::process::exit(1);
     }
 

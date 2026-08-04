@@ -186,7 +186,7 @@ pub fn render_settings(
                 ui.label("A text-based adventure powered by AI");
                 ui.add_space(4.0);
                 ui.label(
-                    egui::RichText::new("Built with Rust, Bevy, and Claude")
+                    egui::RichText::new("Built with Rust, Bevy, and your chosen LLM")
                         .small()
                         .color(egui::Color32::GRAY),
                 );

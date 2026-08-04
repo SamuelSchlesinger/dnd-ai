@@ -5,7 +5,7 @@
 //! is designed to be easier for AI models to use correctly compared to fine-grained
 //! update tools.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Assert a state change declaratively.

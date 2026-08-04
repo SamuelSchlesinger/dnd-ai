@@ -1,11 +1,11 @@
-//! Error types for the Claude API client.
+//! Error types for the LLM client.
 
 use thiserror::Error;
 
-/// Errors that can occur when using the Claude client.
+/// Errors that can occur when using the LLM client.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("API key not configured")]
+    #[error("No LLM provider is configured")]
     NoApiKey,
 
     #[error("Network error: {0}")]

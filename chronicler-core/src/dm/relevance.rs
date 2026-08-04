@@ -1,16 +1,13 @@
 //! Relevance checking for surfacing appropriate context.
 //!
-//! Uses a fast, cheap model (Haiku) to determine which stored consequences
+//! Uses the configured provider's fast model to determine which stored consequences
 //! and facts are relevant to the current player input, enabling semantic
 //! matching instead of just keyword matching.
 
 use super::story_memory::{ConsequenceId, EntityId, FactId, StoryMemory};
-use claude::{Claude, Message, Request};
+use chronicler_llm::{Client, Message, Request};
 use serde::Deserialize;
 use thiserror::Error;
-
-/// Default model for relevance checking (fast and cheap).
-const RELEVANCE_MODEL: &str = "claude-3-5-haiku-20241022";
 
 /// Maximum tokens for relevance check response.
 const RELEVANCE_MAX_TOKENS: usize = 500;
@@ -18,8 +15,8 @@ const RELEVANCE_MAX_TOKENS: usize = 500;
 /// Errors from relevance checking.
 #[derive(Debug, Error)]
 pub enum RelevanceError {
-    #[error("API error: {0:?}")]
-    ApiError(#[from] claude::Error),
+    #[error("API error: {0}")]
+    ApiError(#[from] chronicler_llm::Error),
 
     #[error("Failed to parse relevance response: {0}")]
     ParseError(String),
@@ -60,7 +57,7 @@ impl RelevanceResult {
     }
 }
 
-/// Response format we expect from Haiku.
+/// Response format expected from the fast model.
 #[derive(Debug, Deserialize)]
 struct RelevanceResponse {
     #[serde(default)]
@@ -73,22 +70,20 @@ struct RelevanceResponse {
 
 /// Checks relevance of stored consequences and facts against player input.
 pub struct RelevanceChecker {
-    client: Claude,
+    client: Client,
     model: String,
 }
 
 impl RelevanceChecker {
     /// Create a new relevance checker with the given API client.
-    pub fn new(client: Claude) -> Self {
-        Self {
-            client,
-            model: RELEVANCE_MODEL.to_string(),
-        }
+    pub fn new(client: Client) -> Self {
+        let model = client.fast_model().to_string();
+        Self { client, model }
     }
 
-    /// Create from environment (ANTHROPIC_API_KEY).
-    pub fn from_env() -> Result<Self, claude::Error> {
-        let client = Claude::from_env()?;
+    /// Create from the configured provider environment.
+    pub fn from_env() -> Result<Self, chronicler_llm::Error> {
+        let client = Client::from_env()?;
         Ok(Self::new(client))
     }
 
@@ -100,7 +95,7 @@ impl RelevanceChecker {
 
     /// Check relevance of stored context against player input.
     ///
-    /// This uses a fast model (Haiku) to determine:
+    /// This uses the configured fast model to determine:
     /// 1. Which pending consequences should trigger
     /// 2. Which entities are semantically relevant (even if not mentioned by name)
     pub async fn check_relevance(
@@ -163,7 +158,7 @@ If nothing is relevant, return empty arrays."#
         self.parse_response(&response_text, story_memory)
     }
 
-    /// Parse the Haiku response into a RelevanceResult.
+    /// Parse the model response into a RelevanceResult.
     fn parse_response(
         &self,
         response: &str,
@@ -247,22 +242,20 @@ struct InferredChange {
 
 /// Infers state changes from DM narrative text.
 ///
-/// This uses a fast model (Haiku) to detect when narrative implies state changes
+/// This uses the configured fast model to detect when narrative implies state changes
 /// that the DM didn't explicitly record with tools. For example:
 /// - "Mira smiles warmly" → disposition changed to friendly
 /// - "The guard captain storms off to the gate" → location changed
 pub struct StateInferrer {
-    client: Claude,
+    client: Client,
     model: String,
 }
 
 impl StateInferrer {
     /// Create a new state inferrer with the given API client.
-    pub fn new(client: Claude) -> Self {
-        Self {
-            client,
-            model: RELEVANCE_MODEL.to_string(),
-        }
+    pub fn new(client: Client) -> Self {
+        let model = client.fast_model().to_string();
+        Self { client, model }
     }
 
     /// Set a custom model for state inference.

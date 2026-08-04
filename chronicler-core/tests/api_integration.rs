@@ -1,6 +1,6 @@
-//! Integration tests that call the real Claude API.
+//! Integration tests that call the configured LLM provider.
 //!
-//! These tests require ANTHROPIC_API_KEY to be set (via .env file or environment).
+//! These tests require a provider to be configured via `.env` or the environment.
 //! Run with: `cargo test -p chronicler-core --test api_integration -- --ignored`
 //!
 //! These are marked #[ignore] by default to avoid:
@@ -189,9 +189,9 @@ fn setup() {
     let _ = dotenvy::dotenv();
 }
 
-/// Check if API key is available
+/// Check if an LLM provider is configured.
 fn has_api_key() -> bool {
-    std::env::var("ANTHROPIC_API_KEY").is_ok()
+    chronicler_core::LlmConfig::from_env().is_ok()
 }
 
 #[tokio::test]
@@ -199,7 +199,7 @@ fn has_api_key() -> bool {
 async fn test_dm_registers_consequence_on_hostile_action() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -210,7 +210,7 @@ async fn test_dm_registers_consequence_on_hostile_action() {
 
     // Configure for faster responses
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -252,7 +252,7 @@ async fn test_dm_registers_consequence_on_hostile_action() {
 async fn test_relevance_checker_with_real_api() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -310,7 +310,7 @@ async fn test_relevance_checker_with_real_api() {
 async fn test_relevance_checker_no_false_positives() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -354,7 +354,7 @@ async fn test_relevance_checker_no_false_positives() {
 async fn test_full_consequence_flow_with_api() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -425,7 +425,7 @@ async fn test_full_consequence_flow_with_api() {
 async fn test_dm_handles_cantrip_casting() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -434,7 +434,7 @@ async fn test_dm_handles_cantrip_casting() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -486,7 +486,7 @@ async fn test_dm_handles_cantrip_casting() {
 async fn test_dm_handles_leveled_spell_casting() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -495,7 +495,7 @@ async fn test_dm_handles_leveled_spell_casting() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -553,7 +553,7 @@ async fn test_dm_handles_leveled_spell_casting() {
 async fn test_dm_handles_healing_spell() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -565,7 +565,7 @@ async fn test_dm_handles_healing_spell() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -619,7 +619,7 @@ async fn test_dm_handles_healing_spell() {
 async fn test_dm_handles_barbarian_rage() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -628,7 +628,7 @@ async fn test_dm_handles_barbarian_rage() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -673,7 +673,7 @@ async fn test_dm_handles_barbarian_rage() {
 async fn test_dm_handles_fighter_action_surge() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -685,7 +685,7 @@ async fn test_dm_handles_fighter_action_surge() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -735,7 +735,7 @@ async fn test_dm_handles_fighter_action_surge() {
 async fn test_dm_handles_attack_roll() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -744,7 +744,7 @@ async fn test_dm_handles_attack_roll() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -795,7 +795,7 @@ async fn test_dm_handles_attack_roll() {
 async fn test_dm_handles_skill_check() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -804,7 +804,7 @@ async fn test_dm_handles_skill_check() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -852,7 +852,7 @@ async fn test_dm_handles_skill_check() {
 async fn test_dm_handles_short_rest() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -867,7 +867,7 @@ async fn test_dm_handles_short_rest() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -921,7 +921,7 @@ async fn test_dm_handles_short_rest() {
 async fn test_dm_handles_long_rest_spell_recovery() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -937,7 +937,7 @@ async fn test_dm_handles_long_rest_spell_recovery() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,
@@ -1012,7 +1012,7 @@ async fn test_dm_handles_long_rest_spell_recovery() {
 async fn test_dm_remembers_context_across_turns() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -1021,7 +1021,7 @@ async fn test_dm_remembers_context_across_turns() {
     let mut dm = DungeonMaster::from_env().expect("Failed to create DM");
 
     dm = dm.with_config(DmConfig {
-        model: Some("claude-sonnet-4-20250514".to_string()),
+        model: None,
         max_tokens: 1024,
         temperature: Some(0.7),
         custom_system_prompt: None,

@@ -93,12 +93,10 @@ impl CharacterClass {
             CharacterClass::Barbarian
             | CharacterClass::Monk
             | CharacterClass::Paladin
-            | CharacterClass::Ranger => {
-                if level >= 5 {
-                    2
-                } else {
-                    1
-                }
+            | CharacterClass::Ranger
+                if level >= 5 =>
+            {
+                2
             }
             // Casters and Rogues don't get Extra Attack (Rogues get Sneak Attack instead)
             _ => 1,

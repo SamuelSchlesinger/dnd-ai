@@ -1,6 +1,6 @@
 //! Combat-related tools: damage, healing, conditions, and combat flow.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Apply damage to a character or creature.

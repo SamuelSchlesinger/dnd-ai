@@ -1,4 +1,4 @@
-//! Internal API types for serialization/deserialization with the Claude API.
+//! Internal Anthropic Messages API types.
 
 use serde::{Deserialize, Serialize};
 
@@ -47,18 +47,18 @@ pub(crate) enum ApiContentBlock {
     },
 }
 
-impl From<&ContentBlock> for ApiContentBlock {
-    fn from(block: &ContentBlock) -> Self {
-        match block {
-            ContentBlock::Text { text } => ApiContentBlock::Text { text: text.clone() },
-            ContentBlock::Image { data, media_type } => ApiContentBlock::Image {
+impl ApiContentBlock {
+    pub(crate) fn from_content(block: &ContentBlock) -> Option<Self> {
+        Some(match block {
+            ContentBlock::Text { text } => Self::Text { text: text.clone() },
+            ContentBlock::Image { data, media_type } => Self::Image {
                 source: ApiImageSource {
                     r#type: "base64".to_string(),
                     media_type: media_type.clone(),
                     data: data.clone(),
                 },
             },
-            ContentBlock::ToolUse { id, name, input } => ApiContentBlock::ToolUse {
+            ContentBlock::ToolUse { id, name, input } => Self::ToolUse {
                 id: id.clone(),
                 name: name.clone(),
                 input: input.clone(),
@@ -67,15 +67,16 @@ impl From<&ContentBlock> for ApiContentBlock {
                 tool_use_id,
                 content,
                 is_error,
-            } => ApiContentBlock::ToolResult {
+            } => Self::ToolResult {
                 tool_use_id: tool_use_id.clone(),
                 content: content.clone(),
                 is_error: *is_error,
             },
-            ContentBlock::Thinking { thinking } => ApiContentBlock::Text {
-                text: thinking.clone(),
-            },
-        }
+            // Neither type is ordinary assistant text. Anthropic extended
+            // thinking replay requires signed provider-native blocks, which
+            // this client does not request or synthesize.
+            ContentBlock::Thinking { .. } | ContentBlock::ReasoningDetails { .. } => return None,
+        })
     }
 }
 

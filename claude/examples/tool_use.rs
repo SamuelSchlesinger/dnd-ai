@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo run -p claude --example tool_use
 
-use claude::{Claude, Message, Request, Tool, ToolChoice, ToolResult, ToolUse};
+use chronicler_llm::{Client, Message, Request, Tool, ToolChoice, ToolResult, ToolUse};
 use serde_json::json;
 
 fn calculator_tool() -> Tool {
@@ -49,7 +49,7 @@ fn execute_tool(tool: ToolUse) -> ToolResult {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
 
-    let client = Claude::from_env()?;
+    let client = Client::from_env()?;
 
     let request = Request::new(vec![Message::user("What is 42 * 17 + 5?")])
         .with_system("Use the calculator tool for math.")

@@ -1,8 +1,8 @@
 [package]
-name = "claude"
+name = "chronicler-llm"
 version = "0.1.0"
 edition = "2021"
-description = "Minimal Anthropic Claude API client"
+description = "Provider-neutral LLM client for Chronicler"
 license.workspace = true
 authors.workspace = true
 

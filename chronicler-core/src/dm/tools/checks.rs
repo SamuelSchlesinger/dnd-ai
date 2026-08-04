@@ -1,6 +1,6 @@
 //! Dice rolling and check tools.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Roll dice using standard D&D notation.

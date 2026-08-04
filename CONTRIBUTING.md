@@ -6,14 +6,14 @@ Thanks for your interest in contributing! This document will help you get starte
 
 **Prerequisites:**
 - Rust toolchain ([rustup.rs](https://rustup.rs/))
-- Anthropic API key for testing ([console.anthropic.com](https://console.anthropic.com/))
+- A supported cloud-provider key, or Ollama for local integration testing
 
 **Setup:**
 ```bash
 git clone https://github.com/SamuelSchlesinger/chronicler.git
 cd chronicler
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env and configure one provider, or use --local
 ```
 
 **Build & Test:**
@@ -27,15 +27,42 @@ cargo fmt --check           # Check formatting
 **Run the game:**
 ```bash
 cargo run -p chronicler
+# Local Qwen default; no API key:
+cargo run -p chronicler -- --local
 ```
+
+Provider setup, selection precedence, and custom compatible endpoints are
+documented in [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 ## Project Structure
 
 | Crate | Path | Purpose |
 |-------|------|---------|
-| `claude` | `claude/` | Minimal Anthropic API client |
+| `chronicler-llm` | `claude/` | Anthropic and OpenAI-compatible LLM client |
 | `chronicler-core` | `chronicler-core/` | Game engine, rules, AI DM |
 | `chronicler` | `chronicler-bevy/` | Bevy GUI application |
+
+## Provider Boundary
+
+Game code should depend on the provider-neutral types exported by
+`chronicler-llm`. Do not put Anthropic, OpenAI, OpenRouter, or Ollama wire
+payloads in `chronicler-core`.
+
+- A new OpenAI-compatible service usually needs configuration and tests, not a
+  new transport.
+- A genuinely different protocol belongs behind a transport adapter in
+  `chronicler-llm`.
+- Preserve assistant tool-call content between a tool request and its result.
+  Some providers attach opaque reasoning metadata that must also be replayed.
+- A game-capable model must support JSON-schema tool calling; a successful
+  plain-text completion is not a sufficient integration test.
+
+Use the live smoke test to exercise tool continuation and streaming:
+
+```bash
+cargo run -p chronicler-llm --example provider_smoke -- ollama
+cargo run -p chronicler-llm --example provider_smoke -- openrouter
+```
 
 ## Code Style
 
@@ -49,7 +76,7 @@ cargo run -p chronicler
 Tools let the AI DM interact with game mechanics. To add one:
 
 ```rust
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 pub fn your_tool() -> Tool {

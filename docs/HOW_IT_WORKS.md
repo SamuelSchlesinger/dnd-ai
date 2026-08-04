@@ -6,6 +6,26 @@
 
 The AI Dungeon Master isn't just a chatbot with a fantasy skin. It's a system designed to run actual tabletop RPG sessions compatible with D&D 5e — with proper rules, persistent memory, and narrative craft. Here's how.
 
+## The Model Is a Replaceable Backend
+
+Chronicler's Dungeon Master is not coupled to Claude or any other single model.
+The game core builds provider-neutral messages, tool definitions, and streaming
+events. The `chronicler-llm` boundary translates them to either native Anthropic
+Messages or OpenAI-compatible Chat Completions, which covers OpenAI,
+OpenRouter, Ollama, and other compatible servers.
+
+The same rules engine and tool executor run in every configuration. A model can
+describe an attack, but only the host-side rules engine rolls, validates, and
+applies it. Campaign saves likewise contain game and story state—not provider
+credentials or model selection—so a campaign can move between local and cloud
+inference.
+
+Models are not automatically interchangeable in quality. To run Chronicler, a
+model needs reliable JSON-schema function/tool calling and tool-result
+continuation; streaming support provides incremental narrative output. See
+[Model Providers](PROVIDERS.md) for supported configurations and the exact
+selection rules.
+
 ## The Prompt Stack
 
 Every time you take an action, the AI receives a carefully constructed context:
@@ -116,7 +136,7 @@ There's a gap between what the DM *writes* and what it *records*. The narrative 
 
 But did the DM call `update_npc(disposition="friendly")`? Often not. The narrative implies a state change that never made it to the game state.
 
-After each DM response, a fast model (Haiku) analyzes the text and infers implied changes:
+After each DM response, the configured provider's fast model analyzes the text and infers implied changes:
 
 ```
 Narrative: "Captain Voss storms out, muttering about incompetent adventurers"
@@ -135,17 +155,21 @@ Inferred changes:
 
 Changes above the confidence threshold (default 0.8) are applied automatically. This closes the narrative-state gap without requiring the main model to be perfectly disciplined about tool usage.
 
-## Multi-Model Architecture
+## Two Model Roles, Any Provider
 
-Not every task needs the same model. The system uses different models for different jobs:
+Not every task needs the same model. Each provider configuration assigns models
+to two roles:
 
 | Task | Model | Latency | Cost | Why |
 |------|-------|---------|------|-----|
-| Narrative generation | Sonnet | ~2-4s | $$ | Needs creativity, voice, complex reasoning |
-| Relevance checking | Haiku | ~200ms | ¢ | Simple classification, runs every turn |
-| State inference | Haiku | ~300ms | ¢ | Structured extraction from text |
+| Narrative generation | Provider main model | Provider-dependent | Higher | Needs creativity, voice, complex reasoning |
+| Relevance checking | Provider fast model | Provider-dependent | Lower | Simple classification, runs every turn |
+| State inference | Provider fast model | Provider-dependent | Lower | Structured extraction from text |
 
-This architecture keeps the experience responsive and costs manageable. The relevance check and state inference add minimal latency because they use the fastest available model, while the creative work gets the full power of Sonnet.
+This architecture keeps the experience responsive and costs manageable.
+Relevance checking and state inference use the configured fast model, while
+creative work uses the configured main model. A configuration can assign the
+same model to both roles, which is the default for Ollama and OpenRouter.
 
 The relevance checker runs *before* the main model sees the input — it determines which consequences to inject into the context. The state inferrer runs *after* — it cleans up any implied changes the main model forgot to record.
 
@@ -157,7 +181,7 @@ Here's what happens every time you act:
 Your Action
     ↓
 ┌─────────────────────────────────────────────────────────┐
-│ RELEVANCE CHECK (Haiku - fast, cheap)                   │
+│ RELEVANCE CHECK (provider fast model)                   │
 │ "Does this trigger any registered consequences?"        │
 │ Semantic matching against pending triggers              │
 └─────────────────────────────────────────────────────────┘
@@ -165,7 +189,7 @@ Your Action
 System Prompt Built ← Base DM + Rules + Character + Relevant Memories + Triggered Consequences
     ↓
 ┌─────────────────────────────────────────────────────────┐
-│ NARRATIVE GENERATION (Sonnet - creative, expressive)    │
+│ NARRATIVE GENERATION (provider main model)              │
 │ DM generates response with tool calls                   │
 │ Streaming text + real-time effect callbacks             │
 └─────────────────────────────────────────────────────────┘
@@ -175,7 +199,7 @@ Tools Execute ← Dice rolls, damage, NPC creation, fact storage
 World Updates ← Game state changes persist
     ↓
 ┌─────────────────────────────────────────────────────────┐
-│ STATE INFERENCE (Haiku - fast, cheap)                   │
+│ STATE INFERENCE (provider fast model)                   │
 │ "Did the narrative imply state changes?"                │
 │ High-confidence changes (>0.8) applied automatically    │
 └─────────────────────────────────────────────────────────┘
@@ -183,7 +207,7 @@ World Updates ← Game state changes persist
 You See the Result
 ```
 
-Three models work together: Haiku handles the bookkeeping (relevance, inference), Sonnet handles the storytelling. The rules engine handles consistency. The memory system handles persistence.
+Two model roles work together: the fast model handles bookkeeping (relevance and inference), while the main model handles storytelling. They may be the same model for local or OpenRouter configurations. The rules engine handles consistency and the memory system handles persistence.
 
 ## Key Design Decisions
 

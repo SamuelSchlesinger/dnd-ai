@@ -39,12 +39,14 @@ cargo test --workspace
 # Run a single test
 cargo test test_name
 
-# Run Claude API examples (requires ANTHROPIC_API_KEY in .env)
-cargo run -p claude --example simple_chat
-cargo run -p claude --example tool_use
+# Run configured-provider examples
+cargo run -p chronicler-llm --example simple_chat
+cargo run -p chronicler-llm --example tool_use
+cargo run -p chronicler-llm --example provider_smoke -- ollama
 
-# Run the game (requires ANTHROPIC_API_KEY in .env)
+# Run the game using environment configuration or Ollama
 cargo run -p chronicler
+cargo run -p chronicler -- --local
 ```
 
 ## Pre-Commit Requirements
@@ -74,7 +76,7 @@ This will block commits that fail formatting, clippy, or tests.
 ### Philosophy
 
 - **Unit tests**: Deterministic rules engine tests with real assertions (run in CI)
-- **Integration tests**: API connectivity tests requiring `ANTHROPIC_API_KEY` (marked `#[ignore]`, run manually)
+- **Integration tests**: API connectivity tests requiring a configured provider (marked `#[ignore]`, run manually)
 
 The AI DM's interpretation of player input is non-deterministic and cannot be reliably unit tested. We test the rules engine directly instead.
 
@@ -122,18 +124,18 @@ This workspace contains 3 crates:
 
 | Crate | Path | Description |
 |-------|------|-------------|
-| `claude` | `claude/` | Minimal Anthropic Claude API client |
+| `chronicler-llm` | `claude/` | Anthropic and OpenAI-compatible LLM client |
 | `chronicler-core` | `chronicler-core/` | Tabletop RPG game engine compatible with D&D 5e, with AI Dungeon Master |
 | `chronicler` | `chronicler-bevy/` | Bevy GUI application |
 
-## Claude API Client (`claude/src/`)
+## LLM Client (`claude/src/`)
 
-A minimal, focused Anthropic Claude API client:
+A provider-neutral client with native Anthropic Messages and OpenAI-compatible Chat Completions transports:
 
 ```rust
-use claude::{Claude, Request, Message};
+use chronicler_llm::{Client, Request, Message};
 
-let client = Claude::from_env()?;
+let client = Client::from_env()?;
 let response = client.complete(
     Request::new(vec![Message::user("Hello")])
         .with_system("You are helpful.")
@@ -143,7 +145,18 @@ let response = client.complete(
 Features:
 - Non-streaming and streaming completions
 - Tool use with automatic execution loop (`complete_with_tools`)
-- SSE parsing for streaming responses
+- Anthropic, OpenAI, OpenRouter/Kimi K3, and Ollama support
+- OpenRouter reasoning-metadata preservation across tool turns
+
+Provider invariants:
+- Keep provider wire types inside `chronicler-llm`; core game code uses only
+  normalized messages, content blocks, tools, responses, and stream events.
+- Provider/model configuration is injected when a session is created or loaded
+  and is never serialized into a campaign save.
+- OpenAI-compatible does not mean text-only: a game model must support
+  JSON-schema tools and tool-result continuation.
+- See `docs/PROVIDERS.md` for selection precedence, endpoint overrides, local
+  Qwen usage, and the credential boundary.
 
 ## Game Engine (`chronicler-core/src/`)
 
@@ -172,10 +185,10 @@ dm/
 
 ## Adding a New Tool
 
-Create a function that returns a `claude::Tool` with a JSON schema:
+Create a function that returns a `chronicler_llm::Tool` with a JSON schema:
 
 ```rust
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 pub fn roll_dice() -> Tool {

@@ -1,6 +1,6 @@
 //! World state tools: rest, location, story memory, spells, and progression.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Take a short rest.

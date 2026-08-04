@@ -10,7 +10,7 @@ This document describes the architecture of the chronicler workspace, focused on
 |------------|----------|
 | Primary goal | Tabletop RPG Dungeon Master game |
 | State mutation | AI returns structured intents → Rules engine validates/applies |
-| LLM provider | Anthropic primary, trait hooks for future providers |
+| LLM boundary | Provider-neutral core; native Anthropic and OpenAI-compatible transports |
 | Context management | Critical—campaigns can run for hours across sessions |
 | Subagents | Yes—Combat, NPC, Rules agents with focused contexts |
 | Persistence | Full campaign save/load for multi-session play |
@@ -54,8 +54,9 @@ This document describes the architecture of the chronicler workspace, focused on
 └───────────────────────────────┬─────────────────────────────────┘
                                 │ uses
 ┌───────────────────────────────▼─────────────────────────────────┐
-│                       claude (library crate)                     │
-│  Anthropic API client with streaming, tools, message protocol   │
+│                  chronicler-llm (library crate)                  │
+│  Normalized messages, streams, tools, and provider configuration │
+│  Anthropic │ OpenAI │ OpenRouter │ Ollama/custom compatible      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,10 +66,13 @@ This document describes the architecture of the chronicler workspace, focused on
 
 ```
 chronicler/
-├── claude/              # Anthropic API client (focused, minimal)
+├── claude/              # `chronicler-llm` provider transport crate
 │   └── src/
-│       ├── lib.rs       # Client, Message, Tool, Stream
-│       └── ...
+│       ├── config.rs    # Provider, endpoint, and model selection
+│       ├── client.rs    # Provider-neutral client + Anthropic transport
+│       ├── openai.rs    # OpenAI/OpenRouter/Ollama-compatible transport
+│       ├── types.rs     # Message, tool, response, and stream vocabulary
+│       └── lib.rs       # Public API
 ├── chronicler-core/     # Game logic + AI DM (the heart)
 │   └── src/
 │       ├── lib.rs       # GameSession (public API)
@@ -91,7 +95,7 @@ chronicler/
 ```
 
 **Key changes from current structure:**
-- Generic agent framework → `claude` (focused Anthropic client, no generic Agent trait)
+- Generic agent framework → `chronicler-llm` (focused multi-provider client, no generic Agent trait)
 - `agents/src/dnd/` → `chronicler-core` (promoted to its own crate)
 - Remove unused abstractions (SafetyValidator, generic Memory traits, etc.)
 
@@ -249,7 +253,7 @@ For long campaigns, context efficiency matters. Subagents handle specialized dom
 
 ```rust
 pub struct DungeonMaster {
-    client: Claude,
+    client: Client,
     memory: DmMemory,
     router: SubagentRouter,
 }
@@ -329,7 +333,7 @@ impl DmMemory {
     }
 
     /// Summarize and compress old messages when approaching limits.
-    async fn compress(&mut self, client: &Claude) -> Result<()> {
+    async fn compress(&mut self, client: &Client) -> Result<()> {
         // Use LLM to summarize older messages into compact facts
     }
 }
@@ -337,19 +341,51 @@ impl DmMemory {
 
 ---
 
-## Claude Client (Simplified)
+## LLM Client (Simplified)
 
-Instead of a generic `LlmProvider` trait, a focused Anthropic client:
+The game core uses one provider-neutral client with two transport implementations:
+
+- Anthropic Messages for Anthropic models
+- OpenAI-compatible Chat Completions for OpenAI, OpenRouter, Ollama, and other compatible servers
+
+```text
+GameSession / DungeonMaster
+          │
+          │ Request, Message, Tool, StreamEvent
+          ▼
+   chronicler-llm Client
+       ┌──┴──────────────────┐
+       ▼                     ▼
+Anthropic Messages     OpenAI-compatible Chat
+                            │
+                   OpenAI / OpenRouter /
+                   Ollama / custom server
+```
+
+Provider selection happens at the application boundary. `GameSession` and
+`DungeonMaster` receive a configured `Client`; they do not inspect API keys or
+provider wire formats. Save serialization excludes the client, so provider and
+model can change when a campaign is loaded.
+
+The normalized contract covers text and image content, tools and tool results,
+streaming deltas, parallel tool calls, stop reasons, and usage. Opaque
+OpenRouter reasoning details are retained only so they can be replayed during
+multi-step tool calls; they are not rendered as narrative text.
+
+An additional OpenAI-compatible service normally requires configuration rather
+than a new adapter. It must implement streaming and JSON-schema tool calling
+well enough for the DM loop; accepting text-only chat completions is not
+sufficient. See [`docs/PROVIDERS.md`](docs/PROVIDERS.md) for the operational
+contract and configuration precedence.
 
 ```rust
-pub struct Claude {
+pub struct Client {
     client: reqwest::Client,
-    api_key: String,
-    model: String,
+    config: ClientConfig,
 }
 
-impl Claude {
-    pub fn new(api_key: impl Into<String>) -> Self;
+impl Client {
+    pub fn from_config(config: ClientConfig) -> Result<Self>;
     pub fn from_env() -> Result<Self>;
 
     /// Simple completion.
@@ -419,13 +455,13 @@ macro_rules! tool {
 ## Migration Path
 
 ### Phase 1: Core Restructure
-1. Create `claude/` crate with focused Anthropic client
+1. Create the focused LLM transport crate
 2. Create `chronicler-core/` crate with `GameSession` API
 3. Implement Intent/Effect pattern with `RulesEngine`
 4. Port existing game mechanics (dice, character, combat)
 
 ### Phase 2: AI Integration
-5. Implement `DungeonMaster` agent using new `claude` crate
+5. Implement `DungeonMaster` agent using the provider-neutral `chronicler-llm` crate
 6. Wire up tool execution through `RulesEngine`
 7. Add subagent routing
 8. Implement `DmMemory` with context management
@@ -443,7 +479,7 @@ macro_rules! tool {
 ### Tool Schema Definition: Manual JSON
 
 ```rust
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 pub fn roll_dice() -> Tool {
@@ -534,15 +570,15 @@ The world building system enables the AI to create and manage a persistent, evol
 
 ### Multi-Model Architecture
 
-The system uses different models for different tasks:
+The system assigns two roles to the configured models:
 
 | Task | Model | Purpose |
 |------|-------|---------|
-| **Narrative generation** | Sonnet | Creative, expressive storytelling |
-| **Relevance checking** | Haiku | Fast semantic matching (runs every turn) |
-| **State inference** | Haiku | Detect implied state changes from narrative |
+| **Narrative generation** | Provider main model | Creative, expressive storytelling |
+| **Relevance checking** | Provider fast model | Semantic matching (runs every turn) |
+| **State inference** | Provider fast model | Detect implied state changes from narrative |
 
-This keeps costs low (~$0.01/turn) while maintaining narrative quality. Haiku calls add minimal latency (~200-300ms) compared to the main Sonnet call (~2-4s).
+Cloud configurations can use a cheaper fast model; local and OpenRouter defaults currently reuse the main model for both roles.
 
 ### World Building Flow
 
@@ -553,7 +589,7 @@ This keeps costs low (~$0.01/turn) while maintaining narrative quality. Haiku ca
        │
        ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                    RELEVANCE CHECKER (Haiku - fast, cheap)               │
+│                    RELEVANCE CHECKER (fast model)                        │
 │  • Checks registered consequences against player action                  │
 │  • Surfaces relevant NPCs/locations not explicitly mentioned             │
 │  • Retrieves key facts from story memory                                 │
@@ -568,7 +604,7 @@ This keeps costs low (~$0.01/turn) while maintaining narrative quality. Haiku ca
                                        │
                                        ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                 NARRATIVE GENERATION (Sonnet - creative)                 │
+│                 NARRATIVE GENERATION (main model)                        │
 │           Generates narrative + tool calls (streaming)                   │
 └──────────────────────────────────────┬───────────────────────────────────┘
                                        │
@@ -588,13 +624,13 @@ This keeps costs low (~$0.01/turn) while maintaining narrative quality. Haiku ca
               ▼                        ▼                        ▼
 ┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────────┐
 │     GAME WORLD      │   │    STORY MEMORY     │   │   TOOL RESULT       │
-│  npcs, locations,   │   │  facts, relations,  │   │  (back to Claude    │
+│  npcs, locations,   │   │  facts, relations,  │   │  (back to the LLM   │
 │  quests, log        │   │  consequences       │   │   for next turn)    │
 └─────────────────────┘   └─────────────────────┘   └─────────────────────┘
                                        │
                                        ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                    STATE INFERENCE (Haiku - fast, cheap)                 │
+│                    STATE INFERENCE (fast model)                          │
 │  • Analyzes narrative for implied state changes                          │
 │  • "She smiles warmly" → disposition=friendly (confidence: 0.9)          │
 │  • High-confidence changes (>0.8) applied automatically                  │
@@ -666,7 +702,7 @@ This lets the DM plant story seeds that bloom naturally based on player actions.
 
 Complete data flow for `create_npc`:
 
-1. **Claude generates tool call:**
+1. **The model generates a tool call:**
    ```json
    { "name": "create_npc", "input": {
        "name": "Mira the Innkeeper",
@@ -684,9 +720,9 @@ Complete data flow for `create_npc`:
 
 4. **Effect applied** to `GameWorld.npcs` HashMap
 
-5. **Tool result** returned to Claude: "NPC Mira the Innkeeper enters the world"
+5. **Tool result** returned to the model: "NPC Mira the Innkeeper enters the world"
 
-6. **Claude continues** narrative or calls more tools
+6. **The model continues** narrative or calls more tools
 
 ---
 

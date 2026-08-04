@@ -1,6 +1,6 @@
 //! Location management tools: create, connect, and update locations in the game world.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Create a new location in the game world.

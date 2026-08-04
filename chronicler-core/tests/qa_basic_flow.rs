@@ -6,7 +6,7 @@
 //! - NPC dialogue
 //! - State queries
 //!
-//! Run with: `ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY cargo test -p chronicler-core qa_basic_flow -- --ignored --nocapture`
+//! Run with a configured provider: `cargo test -p chronicler-core qa_basic_flow -- --ignored --nocapture`
 
 use chronicler_core::headless::{HeadlessConfig, HeadlessGame};
 use chronicler_core::world::{Background, CharacterClass, RaceType};
@@ -16,9 +16,9 @@ fn setup() {
     let _ = dotenvy::dotenv();
 }
 
-/// Check if API key is available
+/// Check if an LLM provider is configured.
 fn has_api_key() -> bool {
-    std::env::var("ANTHROPIC_API_KEY").is_ok()
+    chronicler_core::LlmConfig::from_env().is_ok()
 }
 
 // =============================================================================
@@ -30,7 +30,7 @@ fn has_api_key() -> bool {
 async fn test_quick_start_character_creation() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -66,7 +66,7 @@ async fn test_quick_start_character_creation() {
 async fn test_custom_character_elf_wizard() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -108,7 +108,7 @@ async fn test_custom_character_elf_wizard() {
 async fn test_custom_character_dwarf_cleric() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -146,7 +146,7 @@ async fn test_custom_character_dwarf_cleric() {
 async fn test_custom_character_halfling_rogue() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -187,7 +187,7 @@ async fn test_custom_character_halfling_rogue() {
 async fn test_look_around_command() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -230,7 +230,7 @@ async fn test_look_around_command() {
 async fn test_examine_command() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -272,7 +272,7 @@ async fn test_examine_command() {
 async fn test_move_command() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -317,7 +317,7 @@ async fn test_move_command() {
 async fn test_search_command() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -362,7 +362,7 @@ async fn test_search_command() {
 async fn test_npc_dialogue_greeting() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -409,7 +409,7 @@ async fn test_npc_dialogue_greeting() {
 async fn test_npc_dialogue_question() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -455,7 +455,7 @@ async fn test_npc_dialogue_question() {
 async fn test_state_queries_after_gameplay() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -518,7 +518,7 @@ async fn test_state_queries_after_gameplay() {
 async fn test_hp_tracking() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -560,7 +560,7 @@ async fn test_hp_tracking() {
 async fn test_multi_turn_game_flow() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -666,7 +666,7 @@ async fn test_multi_turn_game_flow() {
 async fn test_all_character_classes() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -737,7 +737,7 @@ async fn test_all_character_classes() {
 async fn test_all_races() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 

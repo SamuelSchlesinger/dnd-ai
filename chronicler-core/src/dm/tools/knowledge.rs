@@ -4,7 +4,7 @@
 //! and from whom. This enables secrets, rumors, and information
 //! asymmetry between characters.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Share knowledge between entities.

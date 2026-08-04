@@ -1,5 +1,7 @@
 //! Unit tests for the rules engine.
 
+#![allow(clippy::module_inception)]
+
 #[cfg(test)]
 mod tests {
     use crate::dice::Advantage;

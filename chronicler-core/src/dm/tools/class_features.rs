@@ -1,6 +1,6 @@
 //! Class-specific feature tools (Barbarian, Monk, Paladin, etc.).
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Barbarian enters a rage.

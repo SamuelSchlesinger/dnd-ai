@@ -1588,7 +1588,7 @@ dependencies = [
 name = "chronicler-core"
 version = "0.1.0"
 dependencies = [
- "claude",
+ "chronicler-llm",
  "dotenvy",
  "futures",
  "rand",
@@ -1601,18 +1601,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clang-sys"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b023947811758c97c59bf9d1c188fd619ad4718dcaa767947df1cadb14f39f4"
-dependencies = [
- "glob",
- "libc",
- "libloading",
-]
-
-[[package]]
-name = "claude"
+name = "chronicler-llm"
 version = "0.1.0"
 dependencies = [
  "dotenvy",
@@ -1623,6 +1612,17 @@ dependencies = [
  "thiserror 2.0.17",
  "tokio",
  "tokio-stream",
+]
+
+[[package]]
+name = "clang-sys"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b023947811758c97c59bf9d1c188fd619ad4718dcaa767947df1cadb14f39f4"
+dependencies = [
+ "glob",
+ "libc",
+ "libloading",
 ]
 
 [[package]]

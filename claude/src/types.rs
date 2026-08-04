@@ -1,13 +1,13 @@
-//! Public types for the Claude API client.
+//! Provider-neutral request, response, and streaming types.
 
-/// A completion request to send to Claude.
+/// A completion request to send to an LLM provider.
 ///
 /// Use builder methods to configure the request. At minimum, provide messages via [`Request::new`].
 ///
 /// # Example
 ///
 /// ```
-/// use claude::{Request, Message};
+/// use chronicler_llm::{Request, Message};
 ///
 /// let request = Request::new(vec![Message::user("Hello!")])
 ///     .with_system("You are a helpful assistant.")
@@ -50,7 +50,7 @@ impl Request {
         self
     }
 
-    /// Sets the system prompt that guides Claude's behavior.
+    /// Sets the system prompt that guides the model's behavior.
     pub fn with_system(mut self, system: impl Into<String>) -> Self {
         self.system = Some(system.into());
         self
@@ -62,13 +62,13 @@ impl Request {
         self
     }
 
-    /// Adds tool definitions that Claude can call during the conversation.
+    /// Adds tool definitions that the model can call during the conversation.
     pub fn with_tools(mut self, tools: Vec<Tool>) -> Self {
         self.tools = Some(tools);
         self
     }
 
-    /// Configures how Claude should choose tools.
+    /// Configures how the model should choose tools.
     pub fn with_tool_choice(mut self, tool_choice: ToolChoice) -> Self {
         self.tool_choice = Some(tool_choice);
         self
@@ -133,6 +133,13 @@ pub enum ContentBlock {
     Thinking {
         thinking: String,
     },
+    /// Opaque provider reasoning metadata that must be replayed verbatim.
+    ///
+    /// OpenRouter uses this during multi-step tool interactions. Applications
+    /// should preserve it in assistant history but must not display it as text.
+    ReasoningDetails {
+        details: Vec<serde_json::Value>,
+    },
 }
 
 impl ContentBlock {
@@ -162,7 +169,7 @@ pub enum ToolChoice {
     Tool { name: String },
 }
 
-/// A completion response from Claude.
+/// A completion response from an LLM provider.
 ///
 /// Contains generated content, usage statistics, and stop reason.
 #[derive(Debug, Clone)]
@@ -203,7 +210,7 @@ pub struct Usage {
     pub output_tokens: usize,
 }
 
-/// A tool use request from Claude.
+/// A tool use request from the model.
 #[derive(Debug, Clone)]
 pub struct ToolUse {
     pub id: String,
@@ -252,6 +259,16 @@ pub enum StreamEvent {
     TextDelta {
         index: usize,
         text: String,
+    },
+    /// Provider-supplied reasoning text. Preserve it for tool continuation,
+    /// but do not display it as narrative output.
+    ThinkingDelta {
+        index: usize,
+        text: String,
+    },
+    /// Opaque OpenRouter reasoning details, in provider-supplied order.
+    ReasoningDetails {
+        details: Vec<serde_json::Value>,
     },
     InputJsonDelta {
         index: usize,

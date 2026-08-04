@@ -1,181 +1,117 @@
-//! Claude API client implementation.
+//! Provider-neutral LLM client implementation.
+
+use std::pin::Pin;
 
 use futures::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
-use std::pin::Pin;
 use tokio_stream::Stream;
 
-use crate::api_types::{ApiContent, ApiMessage, ApiRequest, ApiResponse, ApiTool, ApiToolChoice};
+use crate::api_types::{
+    ApiContent, ApiContentBlock, ApiMessage, ApiRequest, ApiResponse, ApiTool, ApiToolChoice,
+};
+use crate::config::{ClientConfig, ProviderKind};
 use crate::error::Error;
+use crate::openai;
 use crate::streaming::parse_sse_events_buffered;
 use crate::types::{
     ContentBlock, Message, Request, Response, Role, StopReason, StreamEvent, ToolChoice,
     ToolResult, ToolUse, Usage,
 };
 
-const API_BASE: &str = "https://api.anthropic.com/v1";
-const API_VERSION: &str = "2023-06-01";
-pub(crate) const DEFAULT_MODEL: &str = "claude-sonnet-4-20250514";
+const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 
-/// Claude API client for making requests to Anthropic's Claude models.
-///
-/// Handles authentication, request serialization, and response parsing.
-/// Supports both synchronous completions and streaming responses.
-///
-/// # Example
-///
-/// ```no_run
-/// use claude::{Claude, Request, Message};
-///
-/// # async fn example() -> Result<(), claude::Error> {
-/// let client = Claude::from_env()?;
-/// let response = client.complete(
-///     Request::new(vec![Message::user("What is the capital of France?")])
-///         .with_system("You are a helpful assistant.")
-/// ).await?;
-/// println!("{}", response.text());
-/// # Ok(())
-/// # }
-/// ```
+/// Client for Anthropic Messages and OpenAI-compatible Chat Completions APIs.
 #[derive(Clone)]
-pub struct Claude {
-    client: reqwest::Client,
-    api_key: String,
-    pub(crate) model: String,
+pub struct Client {
+    http: reqwest::Client,
+    config: ClientConfig,
 }
 
-impl Claude {
-    /// Creates a new Claude client with the provided API key.
-    ///
-    /// Initializes with the default model and HTTP timeouts (120s total, 30s connect).
-    ///
-    /// # Arguments
-    ///
-    /// * `api_key` - Your Anthropic API key from <https://console.anthropic.com/>
-    pub fn new(api_key: impl Into<String>) -> Self {
-        Self {
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .connect_timeout(std::time::Duration::from_secs(30))
-                .build()
-                .expect("Failed to build HTTP client"),
-            api_key: api_key.into(),
-            model: DEFAULT_MODEL.to_string(),
-        }
+impl Client {
+    /// Build a client from explicit provider configuration.
+    pub fn from_config(config: ClientConfig) -> Result<Self, Error> {
+        let http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(600))
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .build()
+            .map_err(|error| Error::Config(format!("failed to build HTTP client: {error}")))?;
+        Ok(Self { http, config })
     }
 
-    /// Creates a Claude client using the `ANTHROPIC_API_KEY` environment variable.
-    ///
-    /// This is the recommended way to initialize the client, keeping API keys out of source code.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::NoApiKey`] if `ANTHROPIC_API_KEY` is not set.
+    /// Resolve provider, credentials, endpoint, and models from the environment.
     pub fn from_env() -> Result<Self, Error> {
-        let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::NoApiKey)?;
-        Ok(Self::new(api_key))
+        Self::from_config(ClientConfig::from_env()?)
     }
 
-    /// Sets the default model for this client.
-    ///
-    /// Can be overridden per-request using [`Request::with_model`].
+    pub fn anthropic(api_key: impl Into<String>) -> Result<Self, Error> {
+        Self::from_config(ClientConfig::anthropic(api_key))
+    }
+
+    pub fn openai(api_key: impl Into<String>) -> Result<Self, Error> {
+        Self::from_config(ClientConfig::openai(api_key))
+    }
+
+    pub fn openrouter(api_key: impl Into<String>) -> Result<Self, Error> {
+        Self::from_config(ClientConfig::openrouter(api_key))
+    }
+
+    /// Connect to Ollama's local OpenAI-compatible endpoint.
+    pub fn local(model: impl Into<String>) -> Result<Self, Error> {
+        Self::from_config(ClientConfig::local(model))
+    }
+
+    /// Override the default narrative model.
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
-        self.model = model.into();
+        self.config.model = model.into();
         self
     }
 
-    /// Sends a completion request and returns the full response.
-    ///
-    /// This is the primary method for non-streaming interactions with Claude.
-    /// Waits for the complete response before returning.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the network request fails or the API returns an error.
-    pub async fn complete(&self, request: Request) -> Result<Response, Error> {
-        let api_request = self.build_api_request(&request, false);
-        let headers = self.build_headers()?;
-
-        let response = self
-            .client
-            .post(format!("{API_BASE}/messages"))
-            .headers(headers)
-            .json(&api_request)
-            .send()
-            .await
-            .map_err(|e| Error::Network(e.to_string()))?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await.unwrap_or_default();
-            return Err(Error::Api {
-                status,
-                message: body,
-            });
-        }
-
-        let api_response: ApiResponse = response
-            .json()
-            .await
-            .map_err(|e| Error::Parse(e.to_string()))?;
-
-        Ok(self.parse_response(api_response))
+    /// Override the cheaper/faster model used by background tasks.
+    pub fn with_fast_model(mut self, model: impl Into<String>) -> Self {
+        self.config.fast_model = model.into();
+        self
     }
 
-    /// Sends a completion request and returns a stream of response events.
-    ///
-    /// Use for real-time streaming, which provides better UX for longer responses.
-    /// Events include text deltas, tool use, and message lifecycle events.
+    pub fn provider(&self) -> ProviderKind {
+        self.config.provider
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.config.base_url
+    }
+
+    pub fn model(&self) -> &str {
+        &self.config.model
+    }
+
+    pub fn fast_model(&self) -> &str {
+        &self.config.fast_model
+    }
+
+    /// Send a non-streaming completion request.
+    pub async fn complete(&self, request: Request) -> Result<Response, Error> {
+        match self.config.provider {
+            ProviderKind::Anthropic => self.complete_anthropic(request).await,
+            ProviderKind::OpenAi | ProviderKind::OpenRouter => {
+                openai::complete(&self.http, &self.config, &request).await
+            }
+        }
+    }
+
+    /// Send a streaming completion request.
     pub async fn stream(
         &self,
         request: Request,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamEvent, Error>> + Send>>, Error> {
-        let api_request = self.build_api_request(&request, true);
-        let headers = self.build_headers()?;
-
-        let response = self
-            .client
-            .post(format!("{API_BASE}/messages"))
-            .headers(headers)
-            .json(&api_request)
-            .send()
-            .await
-            .map_err(|e| Error::Network(e.to_string()))?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await.unwrap_or_default();
-            return Err(Error::Api {
-                status,
-                message: body,
-            });
+        match self.config.provider {
+            ProviderKind::Anthropic => self.stream_anthropic(request).await,
+            ProviderKind::OpenAi | ProviderKind::OpenRouter => {
+                openai::stream(&self.http, &self.config, &request).await
+            }
         }
-
-        // Use scan to maintain a buffer for incomplete SSE events across chunks
-        let stream = response
-            .bytes_stream()
-            .scan(String::new(), |buffer, result| {
-                let events = match result {
-                    Ok(bytes) => {
-                        buffer.push_str(&String::from_utf8_lossy(&bytes));
-                        parse_sse_events_buffered(buffer)
-                    }
-                    Err(e) => vec![Err(Error::Network(e.to_string()))],
-                };
-                // Return Some to continue, the events vector
-                futures::future::ready(Some(events))
-            })
-            .flat_map(futures::stream::iter);
-
-        Ok(Box::pin(stream))
     }
 
-    /// Run a tool use loop until completion.
-    ///
-    /// Given a request with tools and an executor function, this method will:
-    /// 1. Send the request to Claude
-    /// 2. If Claude calls tools, execute them using the provided function
-    /// 3. Send tool results back and repeat until Claude stops using tools
+    /// Run a tool-use loop until the model completes without requesting tools.
     pub async fn complete_with_tools<F, Fut>(
         &self,
         mut request: Request,
@@ -187,39 +123,31 @@ impl Claude {
     {
         loop {
             let response = self.complete(request.clone()).await?;
-
             if response.stop_reason != StopReason::ToolUse {
                 return Ok(response);
             }
 
-            // Collect tool uses
             let tool_uses: Vec<ToolUse> = response
                 .content
                 .iter()
-                .filter_map(|block| {
-                    if let ContentBlock::ToolUse { id, name, input } = block {
-                        Some(ToolUse {
-                            id: id.clone(),
-                            name: name.clone(),
-                            input: input.clone(),
-                        })
-                    } else {
-                        None
-                    }
+                .filter_map(|block| match block {
+                    ContentBlock::ToolUse { id, name, input } => Some(ToolUse {
+                        id: id.clone(),
+                        name: name.clone(),
+                        input: input.clone(),
+                    }),
+                    _ => None,
                 })
                 .collect();
-
             if tool_uses.is_empty() {
                 return Ok(response);
             }
 
-            // Add assistant response to messages
             request.messages.push(Message {
                 role: Role::Assistant,
                 content: response.content.clone(),
             });
 
-            // Execute tools and collect results
             let mut tool_results = Vec::new();
             for tool_use in tool_uses {
                 let result = executor(tool_use.clone()).await;
@@ -229,8 +157,6 @@ impl Claude {
                     is_error: result.is_error,
                 });
             }
-
-            // Add tool results as user message
             request.messages.push(Message {
                 role: Role::User,
                 content: tool_results,
@@ -238,50 +164,117 @@ impl Claude {
         }
     }
 
-    fn build_headers(&self) -> Result<HeaderMap, Error> {
+    async fn complete_anthropic(&self, request: Request) -> Result<Response, Error> {
+        let response = self
+            .http
+            .post(format!("{}/messages", self.config.base_url))
+            .headers(self.anthropic_headers()?)
+            .json(&self.build_anthropic_request(&request, false))
+            .send()
+            .await
+            .map_err(|error| Error::Network(error.to_string()))?;
+
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let message = response.text().await.unwrap_or_default();
+            return Err(Error::Api { status, message });
+        }
+
+        let response: ApiResponse = response
+            .json()
+            .await
+            .map_err(|error| Error::Parse(error.to_string()))?;
+        Ok(parse_anthropic_response(response))
+    }
+
+    async fn stream_anthropic(
+        &self,
+        request: Request,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamEvent, Error>> + Send>>, Error> {
+        let response = self
+            .http
+            .post(format!("{}/messages", self.config.base_url))
+            .headers(self.anthropic_headers()?)
+            .json(&self.build_anthropic_request(&request, true))
+            .send()
+            .await
+            .map_err(|error| Error::Network(error.to_string()))?;
+
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let message = response.text().await.unwrap_or_default();
+            return Err(Error::Api { status, message });
+        }
+
+        let stream = response
+            .bytes_stream()
+            .scan(String::new(), |buffer, result| {
+                let events = match result {
+                    Ok(bytes) => {
+                        buffer.push_str(&String::from_utf8_lossy(&bytes));
+                        parse_sse_events_buffered(buffer)
+                    }
+                    Err(error) => vec![Err(Error::Network(error.to_string()))],
+                };
+                futures::future::ready(Some(events))
+            })
+            .flat_map(futures::stream::iter);
+        Ok(Box::pin(stream))
+    }
+
+    fn anthropic_headers(&self) -> Result<HeaderMap, Error> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         headers.insert(
             "x-api-key",
-            HeaderValue::from_str(&self.api_key)
-                .map_err(|e| Error::Config(format!("Invalid API key: {e}")))?,
+            HeaderValue::from_str(&self.config.api_key)
+                .map_err(|error| Error::Config(format!("invalid API key: {error}")))?,
         );
-        headers.insert("anthropic-version", HeaderValue::from_static(API_VERSION));
+        headers.insert(
+            "anthropic-version",
+            HeaderValue::from_static(ANTHROPIC_API_VERSION),
+        );
         Ok(headers)
     }
 
-    fn build_api_request(&self, request: &Request, stream: bool) -> ApiRequest {
-        let messages: Vec<ApiMessage> = request
+    fn build_anthropic_request(&self, request: &Request, stream: bool) -> ApiRequest {
+        let messages = request
             .messages
             .iter()
-            .map(|m| ApiMessage {
-                role: match m.role {
+            .map(|message| ApiMessage {
+                role: match message.role {
                     Role::User => "user".to_string(),
                     Role::Assistant => "assistant".to_string(),
                 },
-                content: m.content.iter().map(|c| c.into()).collect(),
+                content: message
+                    .content
+                    .iter()
+                    .filter_map(ApiContentBlock::from_content)
+                    .collect(),
             })
             .collect();
-
-        let tools: Option<Vec<ApiTool>> = request.tools.as_ref().map(|tools| {
+        let tools = request.tools.as_ref().map(|tools| {
             tools
                 .iter()
-                .map(|t| ApiTool {
-                    name: t.name.clone(),
-                    description: t.description.clone(),
-                    input_schema: t.input_schema.clone(),
+                .map(|tool| ApiTool {
+                    name: tool.name.clone(),
+                    description: tool.description.clone(),
+                    input_schema: tool.input_schema.clone(),
                 })
                 .collect()
         });
 
         ApiRequest {
-            model: request.model.clone().unwrap_or_else(|| self.model.clone()),
+            model: request
+                .model
+                .clone()
+                .unwrap_or_else(|| self.config.model.clone()),
             max_tokens: request.max_tokens,
             system: request.system.clone(),
             messages,
             temperature: request.temperature,
             tools,
-            tool_choice: request.tool_choice.as_ref().map(|tc| match tc {
+            tool_choice: request.tool_choice.as_ref().map(|choice| match choice {
                 ToolChoice::Auto => ApiToolChoice {
                     r#type: "auto".to_string(),
                     name: None,
@@ -298,37 +291,31 @@ impl Claude {
             stream,
         }
     }
+}
 
-    fn parse_response(&self, api_response: ApiResponse) -> Response {
-        let content: Vec<ContentBlock> = api_response
-            .content
-            .into_iter()
-            .map(|c| match c {
-                ApiContent::Text { text } => ContentBlock::Text { text },
-                ApiContent::ToolUse { id, name, input } => {
-                    ContentBlock::ToolUse { id, name, input }
-                }
-                ApiContent::Thinking { thinking } => ContentBlock::Thinking { thinking },
-            })
-            .collect();
-
-        let stop_reason = match api_response.stop_reason.as_str() {
-            "end_turn" => StopReason::EndTurn,
+fn parse_anthropic_response(response: ApiResponse) -> Response {
+    let content = response
+        .content
+        .into_iter()
+        .map(|content| match content {
+            ApiContent::Text { text } => ContentBlock::Text { text },
+            ApiContent::ToolUse { id, name, input } => ContentBlock::ToolUse { id, name, input },
+            ApiContent::Thinking { thinking } => ContentBlock::Thinking { thinking },
+        })
+        .collect();
+    Response {
+        id: response.id,
+        model: response.model,
+        content,
+        stop_reason: match response.stop_reason.as_str() {
             "max_tokens" => StopReason::MaxTokens,
             "stop_sequence" => StopReason::StopSequence,
             "tool_use" => StopReason::ToolUse,
             _ => StopReason::EndTurn,
-        };
-
-        Response {
-            id: api_response.id,
-            model: api_response.model,
-            content,
-            stop_reason,
-            usage: Usage {
-                input_tokens: api_response.usage.input_tokens,
-                output_tokens: api_response.usage.output_tokens,
-            },
-        }
+        },
+        usage: Usage {
+            input_tokens: response.usage.input_tokens,
+            output_tokens: response.usage.output_tokens,
+        },
     }
 }

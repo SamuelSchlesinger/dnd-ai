@@ -3,7 +3,7 @@
 //! These tools allow the DM to create quests, manage objectives,
 //! and track quest completion status.
 
-use claude::Tool;
+use chronicler_llm::Tool;
 use serde_json::json;
 
 /// Create a new quest.

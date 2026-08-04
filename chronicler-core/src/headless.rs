@@ -38,6 +38,7 @@ use crate::session::{GameSession, SessionConfig, SessionError};
 use crate::world::{
     Ability, AbilityScores, Background, Character, CharacterClass, Condition, RaceType,
 };
+use chronicler_llm::Client;
 use std::path::Path;
 
 /// Configuration for a headless game session.
@@ -329,7 +330,7 @@ pub struct TranscriptEntry {
 impl HeadlessGame {
     /// Create a new headless game with the given configuration.
     ///
-    /// Requires `ANTHROPIC_API_KEY` environment variable to be set.
+    /// Resolves the LLM provider from the environment.
     pub async fn new(config: HeadlessConfig) -> Result<Self, SessionError> {
         let character = config.build_character()?;
 
@@ -344,9 +345,37 @@ impl HeadlessGame {
         })
     }
 
+    /// Create a headless game with an explicitly configured LLM client.
+    pub async fn new_with_client(
+        config: HeadlessConfig,
+        client: Client,
+    ) -> Result<Self, SessionError> {
+        let character = config.build_character()?;
+        let session_config = SessionConfig::new(&config.campaign_name)
+            .with_starting_location(&config.starting_location);
+        let session =
+            GameSession::new_with_character_and_client(session_config, character, client).await?;
+        Ok(Self {
+            session,
+            transcript: Vec::new(),
+        })
+    }
+
     /// Load a saved game from a file.
     pub async fn load(path: impl AsRef<Path>) -> Result<Self, SessionError> {
         let session = GameSession::load(path).await?;
+        Ok(Self {
+            session,
+            transcript: Vec::new(),
+        })
+    }
+
+    /// Load a saved game with an explicitly configured LLM client.
+    pub async fn load_with_client(
+        path: impl AsRef<Path>,
+        client: Client,
+    ) -> Result<Self, SessionError> {
+        let session = GameSession::load_with_client(path, client).await?;
         Ok(Self {
             session,
             transcript: Vec::new(),

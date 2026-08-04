@@ -3,7 +3,7 @@
 //! These tests verify that game state is properly saved and restored.
 //! Run with: `cargo test -p chronicler-core --test qa_persistence -- --ignored --nocapture`
 //!
-//! These tests require ANTHROPIC_API_KEY to be set.
+//! These tests require an LLM provider to be configured.
 
 use chronicler_core::headless::{HeadlessConfig, HeadlessGame};
 use chronicler_core::world::{Background, CharacterClass, RaceType};
@@ -15,9 +15,9 @@ fn setup() {
     let _ = dotenvy::dotenv();
 }
 
-/// Check if API key is available
+/// Check if an LLM provider is configured.
 fn has_api_key() -> bool {
-    std::env::var("ANTHROPIC_API_KEY").is_ok()
+    chronicler_core::LlmConfig::from_env().is_ok()
 }
 
 // =============================================================================
@@ -29,7 +29,7 @@ fn has_api_key() -> bool {
 async fn test_save_and_load_basic() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -64,7 +64,7 @@ async fn test_save_and_load_basic() {
         .expect("Failed to send action");
     println!(
         "  DM Response: {}...",
-        &response.narrative.chars().take(100).collect::<String>()
+        response.narrative.chars().take(100).collect::<String>()
     );
 
     // Save the game
@@ -113,7 +113,7 @@ async fn test_save_and_load_basic() {
 async fn test_save_and_load_hp_state() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -182,7 +182,7 @@ async fn test_save_and_load_hp_state() {
 async fn test_save_and_load_combat_state() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -213,7 +213,7 @@ async fn test_save_and_load_combat_state() {
 
     println!(
         "DM Response: {}...",
-        &response.narrative.chars().take(150).collect::<String>()
+        response.narrative.chars().take(150).collect::<String>()
     );
 
     // Record combat state
@@ -249,7 +249,7 @@ async fn test_save_and_load_combat_state() {
 async fn test_save_and_load_special_characters() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -299,7 +299,7 @@ async fn test_save_and_load_special_characters() {
 async fn test_load_nonexistent_file() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -338,7 +338,7 @@ async fn test_load_nonexistent_file() {
 async fn test_save_creates_parent_directory() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -414,7 +414,7 @@ async fn test_save_creates_parent_directory() {
 async fn test_multiple_save_load_cycles() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -440,7 +440,7 @@ async fn test_multiple_save_load_cycles() {
         println!("Action: {}", action);
         println!(
             "Response: {}...",
-            &response.narrative.chars().take(80).collect::<String>()
+            response.narrative.chars().take(80).collect::<String>()
         );
 
         // Record state before save
@@ -489,7 +489,7 @@ async fn test_multiple_save_load_cycles() {
 async fn test_save_and_load_character_details() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -554,7 +554,7 @@ async fn test_save_and_load_character_details() {
 async fn test_save_file_is_valid_json() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 
@@ -576,7 +576,7 @@ async fn test_save_file_is_valid_json() {
     println!("Save file size: {} bytes", content.len());
     println!(
         "First 500 chars:\n{}",
-        &content.chars().take(500).collect::<String>()
+        content.chars().take(500).collect::<String>()
     );
 
     // Verify it's valid JSON
@@ -615,7 +615,7 @@ async fn test_save_file_is_valid_json() {
 async fn test_overwrite_existing_save() {
     setup();
     if !has_api_key() {
-        eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
+        eprintln!("Skipping test: no LLM provider configured");
         return;
     }
 

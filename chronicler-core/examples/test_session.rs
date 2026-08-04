@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   World state is valid");
 
     // Test 3: Send a player action
-    println!("\n3. Testing player action (this calls Claude API)...");
+    println!("\n3. Testing player action (this calls the configured LLM API)...");
     let response = session.player_action("I look around the tavern.").await?;
     println!("   Response length: {} chars", response.narrative.len());
     println!("   Effects count: {}", response.effects.len());

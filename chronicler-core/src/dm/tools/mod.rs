@@ -32,13 +32,13 @@ mod world;
 pub use info::execute_info_tool_with_memory;
 pub use parsing::parse_tool_call;
 
-use claude::Tool;
+use chronicler_llm::Tool;
 
 /// Collection of D&D tools for the DM.
 pub struct DmTools;
 
 impl DmTools {
-    /// Get all tool definitions for the Claude API.
+    /// Get all tool definitions for the configured LLM API.
     pub fn all() -> Vec<Tool> {
         vec![
             // Checks

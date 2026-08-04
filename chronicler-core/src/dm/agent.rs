@@ -1,7 +1,7 @@
 //! AI Dungeon Master agent.
 //!
 //! The DungeonMaster struct provides the main interface for AI-powered
-//! D&D gameplay. It uses the Claude API to generate narrative responses
+//! D&D gameplay. It uses the configured LLM to generate narrative responses
 //! and tool calls that are resolved by the RulesEngine.
 
 use super::memory::{DmMemory, FactCategory};
@@ -12,18 +12,18 @@ use super::story_memory::{
 use super::tools::{execute_info_tool_with_memory, parse_tool_call, DmTools};
 use crate::rules::{apply_effects, Effect, Intent, Resolution, RulesEngine, StateType};
 use crate::world::{GameMode, GameWorld, NarrativeType};
-use claude::{Claude, ContentBlock, Message, Request, StopReason, StreamEvent, ToolResult};
+use chronicler_llm::{
+    Client, ContentBlock, Message, Request, Role, StopReason, StreamEvent, ToolResult,
+};
 use futures::StreamExt;
+use std::collections::BTreeMap;
 use thiserror::Error;
 
 /// Errors from the DM agent.
 #[derive(Debug, Error)]
 pub enum DmError {
-    #[error("Claude API error: {0:?}")]
-    ApiError(#[from] claude::Error),
-
-    #[error("No API key configured - set ANTHROPIC_API_KEY environment variable")]
-    NoApiKey,
+    #[error("LLM API error: {0}")]
+    ApiError(#[from] chronicler_llm::Error),
 
     #[error("Tool execution failed: {0}")]
     ToolError(String),
@@ -32,7 +32,7 @@ pub enum DmError {
 /// Configuration for the Dungeon Master.
 #[derive(Debug, Clone)]
 pub struct DmConfig {
-    /// The model to use (defaults to claude-sonnet-4-20250514).
+    /// The model to use (defaults to the configured provider's main model).
     pub model: Option<String>,
 
     /// Maximum tokens for responses.
@@ -56,7 +56,7 @@ pub struct DmConfig {
 
     /// Whether to run post-narrative state inference.
     ///
-    /// When `true`, after the DM generates a response, a fast model (Haiku) analyzes
+    /// When `true`, after the DM generates a response, the provider's fast model analyzes
     /// the narrative to detect implied state changes that weren't explicitly recorded.
     /// High-confidence changes (>0.8) are automatically applied.
     ///
@@ -106,7 +106,7 @@ pub struct DmResponse {
 
 /// The AI Dungeon Master.
 pub struct DungeonMaster {
-    client: Claude,
+    client: Client,
     config: DmConfig,
     memory: DmMemory,
     story_memory: StoryMemory,
@@ -114,10 +114,10 @@ pub struct DungeonMaster {
 }
 
 impl DungeonMaster {
-    /// Create a new DungeonMaster with an API key.
-    pub fn new(api_key: impl Into<String>) -> Self {
+    /// Create a DungeonMaster with an explicitly configured LLM client.
+    pub fn with_client(client: Client) -> Self {
         Self {
-            client: Claude::new(api_key),
+            client,
             config: DmConfig::default(),
             memory: DmMemory::new(),
             story_memory: StoryMemory::new(),
@@ -125,16 +125,14 @@ impl DungeonMaster {
         }
     }
 
-    /// Create a DungeonMaster from the ANTHROPIC_API_KEY environment variable.
+    /// Create a DungeonMaster from the configured provider environment.
     pub fn from_env() -> Result<Self, DmError> {
-        let client = Claude::from_env()?;
-        Ok(Self {
-            client,
-            config: DmConfig::default(),
-            memory: DmMemory::new(),
-            story_memory: StoryMemory::new(),
-            rules: RulesEngine::new(),
-        })
+        Ok(Self::with_client(Client::from_env()?))
+    }
+
+    /// Get the LLM client used by the DM and its background tasks.
+    pub fn client(&self) -> &Client {
+        &self.client
     }
 
     /// Get the story memory.
@@ -246,7 +244,7 @@ impl DungeonMaster {
 
             // Add assistant response to messages
             messages.push(Message {
-                role: claude::Role::Assistant,
+                role: Role::Assistant,
                 content: response.content.clone(),
             });
 
@@ -322,7 +320,7 @@ impl DungeonMaster {
 
             // Add tool results as user message
             messages.push(Message {
-                role: claude::Role::User,
+                role: Role::User,
                 content: tool_results,
             });
         }
@@ -427,6 +425,7 @@ impl DungeonMaster {
                 on_text("\n\n");
             }
             iteration += 1;
+            let mut iteration_text = String::new();
 
             let tools = DmTools::all();
 
@@ -447,8 +446,9 @@ impl DungeonMaster {
             let mut stream = self.client.stream(request).await?;
 
             // Track tool uses being accumulated
-            let mut tool_uses: Vec<PartialToolUse> = Vec::new();
-            let mut current_tool_index: Option<usize> = None;
+            let mut tool_uses: BTreeMap<usize, PartialToolUse> = BTreeMap::new();
+            let mut thinking = String::new();
+            let mut reasoning_details = Vec::new();
             let mut stop_reason = StopReason::EndTurn;
 
             while let Some(event_result) = stream.next().await {
@@ -458,6 +458,13 @@ impl DungeonMaster {
                         // Send text to callback immediately
                         on_text(&text);
                         narrative.push_str(&text);
+                        iteration_text.push_str(&text);
+                    }
+                    StreamEvent::ThinkingDelta { text, .. } => {
+                        thinking.push_str(&text);
+                    }
+                    StreamEvent::ReasoningDetails { details } => {
+                        reasoning_details.extend(details);
                     }
                     StreamEvent::ContentBlockStart {
                         index,
@@ -466,34 +473,25 @@ impl DungeonMaster {
                         tool_name,
                     } => {
                         if content_type == "tool_use" {
-                            // Start accumulating a new tool use
-                            current_tool_index = Some(index);
-                            tool_uses.push(PartialToolUse {
-                                id: tool_use_id.unwrap_or_default(),
-                                name: tool_name.unwrap_or_default(),
-                                json_buffer: String::new(),
-                            });
+                            tool_uses.insert(
+                                index,
+                                PartialToolUse {
+                                    id: tool_use_id.unwrap_or_default(),
+                                    name: tool_name.unwrap_or_default(),
+                                    json_buffer: String::new(),
+                                },
+                            );
                         }
                     }
                     StreamEvent::InputJsonDelta {
                         index,
                         partial_json,
                     } => {
-                        // Accumulate JSON for the current tool use
-                        if let Some(current_idx) = current_tool_index {
-                            if index == current_idx {
-                                if let Some(tool) = tool_uses.last_mut() {
-                                    tool.json_buffer.push_str(&partial_json);
-                                }
-                            }
+                        if let Some(tool) = tool_uses.get_mut(&index) {
+                            tool.json_buffer.push_str(&partial_json);
                         }
                     }
-                    StreamEvent::ContentBlockStop { index } => {
-                        // Reset current tool index if this was a tool block
-                        if Some(index) == current_tool_index {
-                            current_tool_index = None;
-                        }
-                    }
+                    StreamEvent::ContentBlockStop { .. } => {}
                     StreamEvent::MessageDelta {
                         stop_reason: Some(sr),
                     } => {
@@ -516,18 +514,26 @@ impl DungeonMaster {
             // Build assistant message content from what we received
             let mut assistant_content: Vec<ContentBlock> = Vec::new();
 
+            if !reasoning_details.is_empty() {
+                assistant_content.push(ContentBlock::ReasoningDetails {
+                    details: reasoning_details,
+                });
+            }
+            if !thinking.is_empty() {
+                assistant_content.push(ContentBlock::Thinking { thinking });
+            }
+
             // Add narrative text if any
-            if !narrative.is_empty() {
-                // Only add the new narrative since last iteration
+            if !iteration_text.is_empty() {
                 assistant_content.push(ContentBlock::Text {
-                    text: narrative.clone(),
+                    text: iteration_text,
                 });
             }
 
             // Add tool uses
-            for tool in &tool_uses {
+            for tool in tool_uses.values() {
                 // Parse JSON input, defaulting to empty object if parsing fails
-                // (Claude API requires tool_use.input to be a valid dictionary)
+                // (tool inputs must be valid JSON objects)
                 let input: serde_json::Value = serde_json::from_str(&tool.json_buffer)
                     .unwrap_or_else(|_| serde_json::json!({}));
                 assistant_content.push(ContentBlock::ToolUse {
@@ -539,13 +545,13 @@ impl DungeonMaster {
 
             // Add assistant response to messages
             messages.push(Message {
-                role: claude::Role::Assistant,
+                role: Role::Assistant,
                 content: assistant_content,
             });
 
             // Execute tools and collect results
             let mut tool_results = Vec::new();
-            for tool in tool_uses {
+            for tool in tool_uses.into_values() {
                 // Parse JSON input, defaulting to empty object if parsing fails
                 let input: serde_json::Value = serde_json::from_str(&tool.json_buffer)
                     .unwrap_or_else(|_| serde_json::json!({}));
@@ -628,7 +634,7 @@ impl DungeonMaster {
 
             // Add tool results as user message
             messages.push(Message {
-                role: claude::Role::User,
+                role: Role::User,
                 content: tool_results,
             });
 
@@ -1173,6 +1179,10 @@ mod tests {
     use crate::dm::story_memory::ConsequenceId;
     use crate::world::{Character, CharacterClass, Location, LocationType};
 
+    fn test_dm() -> DungeonMaster {
+        DungeonMaster::with_client(Client::anthropic("test-key").expect("test client"))
+    }
+
     fn create_test_world() -> GameWorld {
         let mut character = Character::new("Test Hero");
         character.classes.push(crate::world::ClassLevel {
@@ -1210,14 +1220,14 @@ mod tests {
 
     #[test]
     fn test_story_memory_access() {
-        let dm = DungeonMaster::new("test-key");
+        let dm = test_dm();
         let memory = dm.story_memory();
         assert_eq!(memory.current_turn(), 0);
     }
 
     #[test]
     fn test_dm_memory_access() {
-        let dm = DungeonMaster::new("test-key");
+        let dm = test_dm();
         let memory = dm.memory();
         assert!(memory.get_messages().is_empty());
     }
@@ -1225,19 +1235,19 @@ mod tests {
     #[test]
     fn test_with_config() {
         let config = DmConfig {
-            model: Some("claude-sonnet-4-20250514".to_string()),
+            model: Some("test-model".to_string()),
             max_tokens: 2048,
             temperature: Some(0.5),
             custom_system_prompt: Some("Custom prompt".to_string()),
             ..Default::default()
         };
 
-        let _dm = DungeonMaster::new("test-key").with_config(config);
+        let _dm = test_dm().with_config(config);
     }
 
     #[test]
     fn test_build_system_prompt_contains_character_info() {
-        let dm = DungeonMaster::new("test-key");
+        let dm = test_dm();
         let world = create_test_world();
         let prompt = dm.build_system_prompt(&world, "I look around");
 
@@ -1260,7 +1270,7 @@ mod tests {
             explanation: None,
         };
 
-        let dm = DungeonMaster::new("test-key");
+        let dm = test_dm();
         let context = dm.build_triggered_consequences_context(&result);
 
         // Should include header when there are triggered consequences
@@ -1276,7 +1286,7 @@ mod tests {
             explanation: None,
         };
 
-        let dm = DungeonMaster::new("test-key");
+        let dm = test_dm();
         let context = dm.build_triggered_consequences_context(&result);
 
         // Should be empty when no triggered consequences

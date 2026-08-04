@@ -1,4 +1,4 @@
-//! SSE parsing and streaming types for the Claude API.
+//! SSE parsing for the Anthropic Messages API.
 
 use serde::Deserialize;
 
@@ -131,7 +131,7 @@ pub(crate) fn convert_stream_event(event: ApiStreamEvent) -> StreamEvent {
                 index,
                 partial_json,
             },
-            ApiDelta::ThinkingDelta { thinking } => StreamEvent::TextDelta {
+            ApiDelta::ThinkingDelta { thinking } => StreamEvent::ThinkingDelta {
                 index,
                 text: thinking,
             },
